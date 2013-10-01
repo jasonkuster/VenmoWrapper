@@ -13,6 +13,7 @@ namespace VenmoWrapper
     /// </summary>
     public class VenmoUser
     {
+        //TODO: Fix such that client can check whether or not this is the current user
         public int id { get; set; }
         public string first_name { get; set; }
         public string firstname
