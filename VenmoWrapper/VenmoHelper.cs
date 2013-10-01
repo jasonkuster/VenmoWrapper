@@ -71,10 +71,11 @@ namespace VenmoWrapper
         /// Asynchrously logs the user into Venmo given an access code.
         /// </summary>
         /// <param name="accessCode">The access code retrieved from Venmo's OAuth login page.</param>
-        /// <returns>Returns a dictionary with 3 keys:\n
-        /// "accessToken" is the perpetual use access token for the user.\n
-        /// "user" is the json data containing the info about the user.\n
+        /// <returns>Returns a dictionary with 3 keys:
+        /// "accessToken" is the perpetual use access token for the user.
+        /// "user" is the json data containing the info about the user.
         /// "responseCode" is the TCP response code retrieved from the transaction.
+        /// Returns null if already logged in.
         /// </returns>
         public Task<Dictionary<string, string>> LogUserIn(string accessCode)
         {
@@ -92,12 +93,13 @@ namespace VenmoWrapper
         /// <param name="recipient">The user's ID, phone number, or email as indicated by usertype.</param>
         /// <param name="note">The note to accompany the transaction.</param>
         /// <param name="sendAmount">The <code>double</code> amount of the transaction.</param>
+        /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the user is not logged in.</exception>
         /// <returns></returns>
         public Task<Dictionary<string, string>> PostVenmoTransaction(USER_TYPE usertype, string recipient, string note, double sendAmount)
         {
             if (!loggedIn)
             {
-                return null;
+                throw new NotLoggedInException();
             }
             return Task<Dictionary<string, string>>.Factory.StartNew(() => PostTransaction(recipient, note, sendAmount));
         }
@@ -105,12 +107,13 @@ namespace VenmoWrapper
         /// <summary>
         /// Asynchrously returns the current user.
         /// </summary>
+        /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the user is not logged in.</exception>
         /// <returns>VenmoUser object corresponding to the current user.</returns>
         public async Task<VenmoUser> GetMe()
         {
             if (!loggedIn)
             {
-                return null;
+                throw new NotLoggedInException();
             }
             string result = (await GetSomething(venmoMeUrl, userAccessTokenQueryString))["response"];
             return JsonConvert.DeserializeObject<Dictionary<string, VenmoUser>>(result)["data"];
@@ -120,12 +123,13 @@ namespace VenmoWrapper
         /// Asynchronously gets a user from Venmo.
         /// </summary>
         /// <param name="userID">The desired user's ID</param>
+        /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the user is not logged in.</exception>
         /// <returns>VenmoUser object with the desired user's info.</returns>
         public async Task<VenmoUser> GetUser(int userID)
         {
             if (!loggedIn)
             {
-                return null;
+                throw new NotLoggedInException();
             }
             string userUrl = String.Format(venmoUserUrl, userID);
             string userJson = (await GetSomething(userUrl, userAccessTokenQueryString))["response"];
@@ -137,28 +141,30 @@ namespace VenmoWrapper
         /// Asynchronously gets the user's friend list.
         /// </summary>
         /// <param name="userID">The user ID of the user whose friends list is being queried.</param>
+        /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the user is not logged in.</exception>
         /// <returns>Returns an ObservableCollection of VenmoUsers.</returns>
-        public async Task<ObservableCollection<VenmoUser>> GetFriendsList(int userID)
+        public async Task<List<VenmoUser>> GetFriendsList(int userID)
         {
             if (!loggedIn)
             {
-                return null;
+                throw new NotLoggedInException();
             }
             string friendsUrl = String.Format(venmoFriendsUrl, userID);
             string result = (await GetSomething(friendsUrl, userAccessTokenQueryString))["response"];
             Dictionary<string, object> friendsData = JsonConvert.DeserializeObject<Dictionary<string, object>>(result);
-            return JsonConvert.DeserializeObject<ObservableCollection<VenmoUser>>(friendsData["data"].ToString());
+            return JsonConvert.DeserializeObject<List<VenmoUser>>(friendsData["data"].ToString());
         }
 
         /// <summary>
-        /// Returns a tuple 
+        /// 
         /// </summary>
+        /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the user is not logged in.</exception>
         /// <returns></returns>
         public async Task<Tuple<bool, string>> GetRecentTransactions()
         {
             if (!loggedIn)
             {
-                return null;
+                throw new NotLoggedInException();
             }
             Dictionary<string, string> resultDict = await GetSomething(venmoPaymentUrl, userAccessTokenQueryString);
             string result = resultDict["response"];
@@ -179,7 +185,7 @@ namespace VenmoWrapper
 
             while (!operationComplete)
             {
-                Thread.Sleep(250);
+                //Thread.Sleep(250);
             }
 
             Dictionary<string, object> results = JsonConvert.DeserializeObject<Dictionary<string, object>>(venmoResponse);
@@ -204,7 +210,7 @@ namespace VenmoWrapper
 
             while (!operationComplete)
             {
-                Thread.Sleep(250);
+                //Thread.Sleep(250);
             }
 
             Dictionary<string, string> paymentInfo = new Dictionary<string, string>();
@@ -217,30 +223,31 @@ namespace VenmoWrapper
 
         private async Task<Dictionary<string, string>> GetSomething(string url, string queryString)
         {
-            WebClient c = new WebClient();
-            string response = "";
-            string responseCode = "OK";
-            try
-            {
-                response = await c.DownloadStringTaskAsync(url + queryString);
-            }
-            catch (WebException e)
-            {
-                using (WebResponse webResponse = e.Response)
-                {
-                    HttpWebResponse hwr = (HttpWebResponse)webResponse;
-                    response = GetContentFromWebResponse(hwr);
-                    responseCode = hwr.StatusCode.ToString();
-                }
-            }
+        //    WebClient c = new WebClient();
+        //    string response = "";
+        //    string responseCode = "OK";
+        //    try
+        //    {
+        //        response = await c.DownloadStringTaskAsync(url + queryString);
+        //    }
+        //    catch (WebException e)
+        //    {
+        //        using (WebResponse webResponse = e.Response)
+        //        {
+        //            HttpWebResponse hwr = (HttpWebResponse)webResponse;
+        //            response = GetContentFromWebResponse(hwr);
+        //            responseCode = hwr.StatusCode.ToString();
+        //        }
+        //    }
 
-            Dictionary<string, string> responseDict = new Dictionary<string, string>
-            {
-                { "responseCode", responseCode },
-                { "response", response }
-            };
+        //    Dictionary<string, string> responseDict = new Dictionary<string, string>
+        //    {
+        //        { "responseCode", responseCode },
+        //        { "response", response }
+        //    };
 
-            return responseDict;
+        //    return responseDict;
+            return null;
         }
 
         #endregion
@@ -251,6 +258,31 @@ namespace VenmoWrapper
         string postData = "";
         HttpStatusCode resultCode = HttpStatusCode.Unused;
         string venmoResponse = "";
+
+        private async Task<Dictionary<string, string>> VenmoPost(string url, string postData)
+        {
+            HttpWebRequest webRequest = (HttpWebRequest)HttpWebRequest.Create(url);
+            webRequest.Method = "POST";
+            webRequest.ContentType = "application/x-www-form-urlencoded";
+
+            var reqStream = await Task<Stream>.Factory.FromAsync(webRequest.BeginGetRequestStream, webRequest.EndGetRequestStream, null);
+
+            byte[] byteArray = Encoding.UTF8.GetBytes(postData);
+            reqStream.Write(byteArray, 0, byteArray.Length);
+
+            var webResponse = (HttpWebResponse)(await Task<WebResponse>.Factory.FromAsync(webRequest.BeginGetResponse, webRequest.EndGetResponse, null));
+
+            string rc = webResponse.StatusCode.ToString();
+            string resp = GetContentFromWebResponse(webResponse);
+
+            Dictionary<string, string> responseDict = new Dictionary<string, string>
+            {
+                { "responseCode", rc },
+                { "response", resp }
+            };
+
+            return responseDict;
+        }
 
         private void BeginPOSTRequest(string url, string postData)
         {
@@ -273,7 +305,6 @@ namespace VenmoWrapper
 
             // Add the post data to the web request
             postStream.Write(byteArray, 0, byteArray.Length);
-            postStream.Close();
 
             // Start the web request
             webRequest.BeginGetResponse(new AsyncCallback(ReturnFromVenmo), webRequest);
@@ -336,5 +367,19 @@ namespace VenmoWrapper
 
         #endregion
 
+    }
+
+    public class NotLoggedInException : System.Exception
+    {
+        public NotLoggedInException() : base() { }
+        public NotLoggedInException(string message) : base(message) { }
+        public NotLoggedInException(string message, System.Exception inner) : base(message, inner) { }
+    }
+
+    public class VenmoException : System.Exception
+    {
+        public VenmoException() : base() { }
+        public VenmoException(string message) : base(message) { }
+        public VenmoException(string message, System.Exception inner) : base(message, inner) { }
     }
 }

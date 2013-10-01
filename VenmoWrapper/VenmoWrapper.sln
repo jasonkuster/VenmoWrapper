@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VenmoWrapper", "VenmoWrapper.csproj", "{9ECB4134-FF33-4ED0-A706-86235BCDE60B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VenmoWrapper", "VenmoWrapper.csproj", "{1DAB66D8-FFC9-4B4E-88A1-0CEF4EAFFA56}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -9,10 +9,10 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{9ECB4134-FF33-4ED0-A706-86235BCDE60B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9ECB4134-FF33-4ED0-A706-86235BCDE60B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9ECB4134-FF33-4ED0-A706-86235BCDE60B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9ECB4134-FF33-4ED0-A706-86235BCDE60B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1DAB66D8-FFC9-4B4E-88A1-0CEF4EAFFA56}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1DAB66D8-FFC9-4B4E-88A1-0CEF4EAFFA56}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1DAB66D8-FFC9-4B4E-88A1-0CEF4EAFFA56}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1DAB66D8-FFC9-4B4E-88A1-0CEF4EAFFA56}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
