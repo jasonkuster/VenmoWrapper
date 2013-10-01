@@ -223,31 +223,24 @@ namespace VenmoWrapper
 
         private async Task<Dictionary<string, string>> GetSomething(string url, string queryString)
         {
-        //    WebClient c = new WebClient();
-        //    string response = "";
-        //    string responseCode = "OK";
-        //    try
-        //    {
-        //        response = await c.DownloadStringTaskAsync(url + queryString);
-        //    }
-        //    catch (WebException e)
-        //    {
-        //        using (WebResponse webResponse = e.Response)
-        //        {
-        //            HttpWebResponse hwr = (HttpWebResponse)webResponse;
-        //            response = GetContentFromWebResponse(hwr);
-        //            responseCode = hwr.StatusCode.ToString();
-        //        }
-        //    }
+            string response = "";
+            string responseCode = "OK";
 
-        //    Dictionary<string, string> responseDict = new Dictionary<string, string>
-        //    {
-        //        { "responseCode", responseCode },
-        //        { "response", response }
-        //    };
+            HttpWebRequest webRequest = (HttpWebRequest)HttpWebRequest.Create(url + queryString);
+            webRequest.Method = "GET";
 
-        //    return responseDict;
-            return null;
+            var resp = (HttpWebResponse)(await Task<WebResponse>.Factory.FromAsync(webRequest.BeginGetResponse, webRequest.EndGetResponse, null));
+
+            response = GetContentFromWebResponse(resp);
+            responseCode = resp.StatusCode.ToString();
+
+            Dictionary<string, string> responseDict = new Dictionary<string, string>
+            {
+                { "responseCode", responseCode },
+                { "response", response }
+            };
+
+            return responseDict;
         }
 
         #endregion
