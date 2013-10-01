@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 
 namespace VenmoWrapper
 {
+    //TODO: Document ALL THE THINGS
     /// <summary>
     /// This is the main Venmo helper class. It is instantiated by providing the client's ID
     /// and secret, with the option to provide a userAccessToken in case the user has already
@@ -215,8 +216,7 @@ namespace VenmoWrapper
         {
             HttpWebRequest webRequest = (HttpWebRequest)HttpWebRequest.Create(url + queryString);
             webRequest.Method = "GET";
-            var webResponse = (HttpWebResponse)(await Task<WebResponse>.Factory.FromAsync(webRequest.BeginGetResponse, webRequest.BetterEndGetResponse, null));
-            //TODO: Error Checking/Handling Here
+            var webResponse = (HttpWebResponse)(await Task<WebResponse>.Factory.FromAsync(webRequest.BeginGetResponse, (Func<IAsyncResult, WebResponse>)webRequest.BetterEndGetResponse, null));
 
             string responseCode = webResponse.StatusCode.ToString();
             string response = GetContentFromWebResponse(webResponse);
@@ -237,7 +237,7 @@ namespace VenmoWrapper
             byte[] byteArray = Encoding.UTF8.GetBytes(postData);
             reqStream.Write(byteArray, 0, byteArray.Length);
 
-            var webResponse = (HttpWebResponse)(await Task<WebResponse>.Factory.FromAsync(webRequest.BeginGetResponse, webRequest.BetterEndGetResponse, null));
+            var webResponse = (HttpWebResponse)(await Task<WebResponse>.Factory.FromAsync(webRequest.BeginGetResponse, (Func<IAsyncResult, WebResponse>)webRequest.BetterEndGetResponse, null));
 
             string responseCode = webResponse.StatusCode.ToString();
             string response = GetContentFromWebResponse(webResponse);
@@ -304,7 +304,6 @@ namespace VenmoWrapper
     //     You may not use the software except in compliance with the License.
     //
     //-----------------------------------------------------------------------
-
     public static class WebRequestExtension
     {
         public static WebResponse BetterEndGetResponse(this WebRequest request, IAsyncResult asyncResult)
