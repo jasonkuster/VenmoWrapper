@@ -215,7 +215,7 @@ namespace VenmoWrapper
         {
             HttpWebRequest webRequest = (HttpWebRequest)HttpWebRequest.Create(url + queryString);
             webRequest.Method = "GET";
-            var webResponse = (HttpWebResponse)(await Task<WebResponse>.Factory.FromAsync(webRequest.BeginGetResponse, webRequest.EndGetResponse, null));
+            var webResponse = (HttpWebResponse)(await Task<WebResponse>.Factory.FromAsync(webRequest.BeginGetResponse, webRequest.BetterEndGetResponse, null));
             //TODO: Error Checking/Handling Here
 
             string responseCode = webResponse.StatusCode.ToString();
@@ -233,13 +233,11 @@ namespace VenmoWrapper
             webRequest.ContentType = "application/x-www-form-urlencoded";
 
             var reqStream = await Task<Stream>.Factory.FromAsync(webRequest.BeginGetRequestStream, webRequest.EndGetRequestStream, null);
-            //TODO: Error Checking/Handling Here
 
             byte[] byteArray = Encoding.UTF8.GetBytes(postData);
             reqStream.Write(byteArray, 0, byteArray.Length);
 
-            var webResponse = (HttpWebResponse)(await Task<WebResponse>.Factory.FromAsync(webRequest.BeginGetResponse, webRequest.EndGetResponse, null));
-            //TODO: Error Checking/Handling Here
+            var webResponse = (HttpWebResponse)(await Task<WebResponse>.Factory.FromAsync(webRequest.BeginGetResponse, webRequest.BetterEndGetResponse, null));
 
             string responseCode = webResponse.StatusCode.ToString();
             string response = GetContentFromWebResponse(webResponse);
@@ -295,5 +293,34 @@ namespace VenmoWrapper
         public VenmoException() : base() { }
         public VenmoException(string message) : base(message) { }
         public VenmoException(string message, System.Exception inner) : base(message, inner) { }
+    }
+
+    //-----------------------------------------------------------------------
+    //
+    //     Copyright (c) 2011 Garrett Serack. All rights reserved.
+    //
+    //
+    //     The software is licensed under the Apache 2.0 License (the "License")
+    //     You may not use the software except in compliance with the License.
+    //
+    //-----------------------------------------------------------------------
+
+    public static class WebRequestExtension
+    {
+        public static WebResponse BetterEndGetResponse(this WebRequest request, IAsyncResult asyncResult)
+        {
+            try
+            {
+                return request.EndGetResponse(asyncResult);
+            }
+            catch (WebException wex)
+            {
+                if (wex.Response != null)
+                {
+                    return wex.Response;
+                }
+                throw;
+            }
+        }
     }
 }
