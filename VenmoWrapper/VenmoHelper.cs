@@ -232,10 +232,11 @@ namespace VenmoWrapper
             webRequest.Method = "POST";
             webRequest.ContentType = "application/x-www-form-urlencoded";
 
-            var reqStream = await Task<Stream>.Factory.FromAsync(webRequest.BeginGetRequestStream, webRequest.EndGetRequestStream, null);
-
-            byte[] byteArray = Encoding.UTF8.GetBytes(postData);
-            reqStream.Write(byteArray, 0, byteArray.Length);
+            using (Stream reqStream = await Task<Stream>.Factory.FromAsync(webRequest.BeginGetRequestStream, webRequest.EndGetRequestStream, null))
+            {
+                byte[] byteArray = Encoding.UTF8.GetBytes(postData);
+                reqStream.Write(byteArray, 0, byteArray.Length);
+            }
 
             var webResponse = (HttpWebResponse)(await Task<WebResponse>.Factory.FromAsync(webRequest.BeginGetResponse, (Func<IAsyncResult, WebResponse>)webRequest.BetterEndGetResponse, null));
 
