@@ -5,4 +5,8 @@ This is a C# wrapper for the Venmo service. Originally written for Windows Phone
 
 *_STILL UNDER HEAVY DEVELOPMENT, SHOULD NOT BE USED IN PRODUCTION CODE_*
 
-After the latest commit, it _might_ work. It _might_ also eat your children and kill your sheep and burn your house down and punch your puppy. As of right now, it is 150% untested and may just crash on run. I wrote code that I think makes sense, but I can't know until I try it, and school is breathing down my neck. Will have an update in a few days.
+After the latest commit, the VenmoGet and VenmoPost methods both likely work. I haven't yet tested the ancillary business like the helper functions or different classes, but at least we can get stuff from and send stuff to Venmo. I'll be migrating my app over to this library over the weekend - I'll update this readme then.
+
+Required Packages:
+Newtonsoft.Json
+Microsoft.bcl.async
