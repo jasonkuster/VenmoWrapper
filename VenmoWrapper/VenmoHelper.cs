@@ -97,16 +97,17 @@ namespace VenmoWrapper
         /// <param name="recipient">The user's ID, phone number, or email as indicated by usertype.</param>
         /// <param name="note">The note to accompany the transaction.</param>
         /// <param name="sendAmount">The <code>double</code> amount of the transaction.</param>
+        /// <param name="audience">The audience ("public", "friends", or "private") to which this transaction should be visible.</param>
         /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the user is not logged in.</exception>
         /// <returns></returns>
-        public async Task<PaymentResult> PostVenmoTransaction(USER_TYPE usertype, string recipient, string note, double sendAmount)
+        public async Task<PaymentResult> PostVenmoTransaction(USER_TYPE usertype, string recipient, string note, double sendAmount, string audience = "public")
         {
             if (!loggedIn)
             {
                 throw new NotLoggedInException();
             }
 
-            string venmoResponse = await PostTransaction(recipient, note, sendAmount);
+            string venmoResponse = await PostTransaction(recipient, note, sendAmount, audience);
             PaymentResult pr = JsonConvert.DeserializeObject<PaymentResult>(venmoResponse);
             return pr;
         }
@@ -206,9 +207,9 @@ namespace VenmoWrapper
             return results["user"].ToString(); ;
         }
 
-        private async Task<string> PostTransaction(string recipient, string note, double sendAmount)
+        private async Task<string> PostTransaction(string recipient, string note, double sendAmount, string audience)
         {
-            string postData = "access_token=" + userAccessToken + "&" + recipient + "&note=" + note + "&amount=" + sendAmount;
+            string postData = "access_token=" + userAccessToken + "&" + recipient + "&note=" + note + "&amount=" + sendAmount + "&audience=" + audience;
             return await VenmoPost(venmoPaymentUrl, postData);
         }
 
