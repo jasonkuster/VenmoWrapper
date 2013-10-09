@@ -41,6 +41,7 @@ namespace VenmoWrapper
 
         string venmoAuthUrl = "https://api.venmo.com/oauth/access_token";
         string venmoPaymentUrl = "https://api.venmo.com/payments";
+        string venmoIndividualPaymentUrl = "https://api.venmo.com/payments/{0}";
         string venmoUserUrl = "https://api.venmo.com/users/{0}";
         string venmoFriendsUrl = "https://api.venmo.com/users/{0}/friends";
         string venmoMeUrl = "https://api.venmo.com/me";
@@ -152,7 +153,7 @@ namespace VenmoWrapper
         /// </summary>
         /// <param name="userID">The user ID of the user whose friends list is being queried.</param>
         /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the user is not logged in.</exception>
-        /// <returns>Returns an ObservableCollection of VenmoUsers.</returns>
+        /// <returns>Returns a List of VenmoUsers.</returns>
         public async Task<List<VenmoUser>> GetFriendsList(int userID)
         {
             if (!loggedIn)
@@ -166,10 +167,37 @@ namespace VenmoWrapper
         }
 
         /// <summary>
-        /// 
+        /// Given a transactionID, returns the VenmoTransaction 
+        /// </summary>
+        /// <param name="transactionID">The id of the transaction to be returned.</param>
+        /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the user is not logged in.</exception>
+        /// <returns>Returns the VenmoTransaction requested</returns>
+        public async Task<VenmoTransaction> GetTransaction(int transactionID)
+        {
+            if (!loggedIn)
+            {
+                throw new NotLoggedInException();
+            }
+            string paymentUrl = String.Format(venmoIndividualPaymentUrl, transactionID);
+
+            string venmoResponse = await VenmoGet(paymentUrl, userAccessTokenQueryString);
+
+            Dictionary<string, object> transactionData = JsonConvert.DeserializeObject<Dictionary<string, object>>(venmoResponse);
+            VenmoTransaction trans = JsonConvert.DeserializeObject<VenmoTransaction>(transactionData["data"].ToString());
+            
+            if (trans.target_user_type == "user_id")
+            {
+                trans.target_user = await GetUser(int.Parse(trans.target_user_id));
+            }
+
+            return trans;
+        }
+
+        /// <summary>
+        /// Method to get the recent transactions in which the current user has been involved.
         /// </summary>
         /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the user is not logged in.</exception>
-        /// <returns></returns>
+        /// <returns>List of VenmoTransactions</returns>
         public async Task<List<VenmoTransaction>> GetRecentTransactions()
         {
             if (!loggedIn)
