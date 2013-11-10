@@ -30,7 +30,14 @@ namespace VenmoWrapper
         {
             get
             {
-                return action == "pay" ? "/Assets/AppBar/minus.png" : "/Toolkit.Content/ApplicationBar.Add.png";
+                if (!target_user_id.Equals(VenmoHelper.currentUser.id.ToString()))
+                {
+                    return action == "pay" ? "/Assets/AppBar/minus.png" : "/Toolkit.Content/ApplicationBar.Add.png";
+                }
+                else
+                {
+                    return action == "pay" ? "/Toolkit.Content/ApplicationBar.Add.png" : "/Assets/AppBar/minus.png";
+                }
             }
         }
 
@@ -40,11 +47,18 @@ namespace VenmoWrapper
             {
                 if (target_user != null)
                 {
-                    return action == "pay" ? "You paid " + target_user.display_name + " $" + amount : target_user.display_name + " paid you $" + amount;
+                    if (!target_user_id.Equals(VenmoHelper.currentUser.id.ToString()))
+                    {
+                        return action == "pay" ? "You paid " + target_user.display_name + " $" + amount + "." : "You charged " + target_user.display_name + " $" + amount + ".";
+                    }
+                    else
+                    {
+                        return action == "pay" ? "Someone paid you $" + amount + "." : "Someone charged you $" + amount + ".";
+                    }
                 }
                 else
                 {
-                    return target_user_id;
+                    return action == "pay" ? "You paid " + target_user_id + " $" + amount + "." : "You charged " + target_user_id + " $" + amount + ".";
                 }
             }
         }

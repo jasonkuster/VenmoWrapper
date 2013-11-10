@@ -33,22 +33,24 @@ namespace VenmoWrapper
                 return "?access_token=" + userAccessToken;
             }
         }
-        public bool loggedIn { get; private set; }
+        public static bool loggedIn { get; private set; }
+        public static VenmoUser currentUser { get; private set; }
 
         #endregion
 
         #region Constants
 
-        string venmoAuthUrl = "https://api.venmo.com/oauth/access_token";
-        string venmoPaymentUrl = "https://api.venmo.com/payments";
-        string venmoIndividualPaymentUrl = "https://api.venmo.com/payments/{0}";
-        string venmoUserUrl = "https://api.venmo.com/users/{0}";
-        string venmoFriendsUrl = "https://api.venmo.com/users/{0}/friends";
-        string venmoMeUrl = "https://api.venmo.com/me";
+        const string venmoAuthUrl = "https://api.venmo.com/oauth/access_token";
+        const string venmoPaymentUrl = "https://api.venmo.com/payments";
+        const string venmoIndividualPaymentUrl = "https://api.venmo.com/payments/{0}";
+        const string venmoUserUrl = "https://api.venmo.com/users/{0}";
+        const string venmoFriendsUrl = "https://api.venmo.com/users/{0}/friends";
+        const string venmoMeUrl = "https://api.venmo.com/me";
+        const string notLoggedInError = "You are not currently logged in. Please log in now.";
 
         #endregion
 
-        #region Constructors
+        #region Initial
 
         public VenmoHelper(int clientID, string clientSecret)
         {
@@ -88,6 +90,7 @@ namespace VenmoWrapper
 
             string venmoResponse = await LogIn(accessCode);
             VenmoUser currentUser = JsonConvert.DeserializeObject<VenmoUser>(venmoResponse);
+            this.currentUser = currentUser;
             return currentUser;
         }
 
@@ -105,10 +108,14 @@ namespace VenmoWrapper
         {
             if (!loggedIn)
             {
-                throw new NotLoggedInException();
+                throw new NotLoggedInException(notLoggedInError);
             }
 
-            string venmoResponse = await PostTransaction(recipient, note, sendAmount, audience);
+            string type = usertype == USER_TYPE.EMAIL ? "email=" : usertype == USER_TYPE.PHONE ? "phone=" : "user_id=";
+
+            string postData = "access_token=" + userAccessToken + "&" + usertype + recipient + "&note=" + note + "&amount=" + sendAmount + "&audience=" + audience;
+            string venmoResponse = await VenmoPost(venmoPaymentUrl, postData);
+
             PaymentResult pr = JsonConvert.DeserializeObject<PaymentResult>(venmoResponse);
             return pr;
         }
@@ -122,7 +129,7 @@ namespace VenmoWrapper
         {
             if (!loggedIn)
             {
-                throw new NotLoggedInException();
+                throw new NotLoggedInException(notLoggedInError);
             }
 
             string result = await VenmoGet(venmoMeUrl, userAccessTokenQueryString);
@@ -140,7 +147,7 @@ namespace VenmoWrapper
         {
             if (!loggedIn)
             {
-                throw new NotLoggedInException();
+                throw new NotLoggedInException(notLoggedInError);
             }
             string userUrl = String.Format(venmoUserUrl, userID);
             string userJson = await VenmoGet(userUrl, userAccessTokenQueryString);
@@ -158,7 +165,7 @@ namespace VenmoWrapper
         {
             if (!loggedIn)
             {
-                throw new NotLoggedInException();
+                throw new NotLoggedInException(notLoggedInError);
             }
             string friendsUrl = String.Format(venmoFriendsUrl, userID);
             string result = await VenmoGet(friendsUrl, userAccessTokenQueryString);
@@ -176,7 +183,7 @@ namespace VenmoWrapper
         {
             if (!loggedIn)
             {
-                throw new NotLoggedInException();
+                throw new NotLoggedInException(notLoggedInError);
             }
             string paymentUrl = String.Format(venmoIndividualPaymentUrl, transactionID);
 
@@ -202,7 +209,7 @@ namespace VenmoWrapper
         {
             if (!loggedIn)
             {
-                throw new NotLoggedInException();
+                throw new NotLoggedInException(notLoggedInError);
             }
             string venmoResponse = await VenmoGet(venmoPaymentUrl, userAccessTokenQueryString);
 
@@ -232,13 +239,7 @@ namespace VenmoWrapper
             userAccessToken = (string)results["access_token"];
             loggedIn = true;
 
-            return results["user"].ToString(); ;
-        }
-
-        private async Task<string> PostTransaction(string recipient, string note, double sendAmount, string audience)
-        {
-            string postData = "access_token=" + userAccessToken + "&" + recipient + "&note=" + note + "&amount=" + sendAmount + "&audience=" + audience;
-            return await VenmoPost(venmoPaymentUrl, postData);
+            return results["user"].ToString();
         }
 
         private async Task<string> VenmoGet(string url, string queryString)
@@ -288,7 +289,15 @@ namespace VenmoWrapper
                 var definition = new { message = "", code = 0 };
                 Dictionary<string, object> message = JsonConvert.DeserializeObject<Dictionary<string, object>>(response);
                 var error = JsonConvert.DeserializeAnonymousType(message["error"].ToString(), definition);
-                throw new VenmoException(error.message);
+                if (error.code == 262)
+                {
+                    logOut();
+                    throw new NotLoggedInException(notLoggedInError);
+                }
+                else
+                {
+                    throw new VenmoException(error.message);
+                }
             }
         }
 
@@ -304,6 +313,7 @@ namespace VenmoWrapper
         public void logOut()
         {
             userAccessToken = "";
+            currentUser = null;
             loggedIn = false;
         }
 
