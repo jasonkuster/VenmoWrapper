@@ -11,7 +11,7 @@ namespace VenmoWrapper
     /// including the current user. Check if balance, phone number, or email
     /// are null to determine if this is the current user or not.
     /// </summary>
-    public class VenmoUser
+    public class VenmoUser : IComparable
     {
         //TODO: Fix such that client can check whether or not this is the current user
         public int id { get; set; }
@@ -80,5 +80,16 @@ namespace VenmoWrapper
         }
         public string phone { get; set; }
         public string email { get; set; }
+
+        public int CompareTo(object obj)
+        {
+            VenmoUser user = obj as VenmoUser;
+            if (user == null)
+            {
+                throw new ArgumentException("Object is not Preson");
+            }
+            int same = this.first_name.CompareTo(user.first_name);
+            return same == 0 ? this.last_name.CompareTo(user.last_name) : same;
+        }
     }
 }

@@ -13,20 +13,20 @@ namespace VenmoWrapper
 {
     //TODO: Document ALL THE THINGS
     /// <summary>
-    /// This is the main Venmo helper class. It is instantiated by providing the client's ID
+    /// This is the main Venmo helper class. It is initialized by providing the client's ID
     /// and secret, with the option to provide a userAccessToken in case the user has already
     /// authenticated this particular client.
     /// </summary>
-    public class VenmoHelper
+    public static class VenmoHelper
     {
 
         #region Class Vars
 
-        public enum USER_TYPE { USER_ID, PHONE, EMAIL };
-        public int clientID { get; private set; }
-        public string clientSecret { get; private set; }
-        public string userAccessToken { get; private set; }
-        public string userAccessTokenQueryString
+        public enum USER_TYPE { USER_ID, PHONE, EMAIL, INVALID };
+        public static int clientID { get; private set; }
+        public static string clientSecret { get; private set; }
+        public static string userAccessToken { get; private set; }
+        public static string userAccessTokenQueryString
         {
             get
             {
@@ -50,24 +50,20 @@ namespace VenmoWrapper
 
         #endregion
 
-        #region Initial
-
-        public VenmoHelper(int clientID, string clientSecret)
+        public static void SetUp(int clientID, string clientSecret)
         {
-            this.clientID = clientID;
-            this.clientSecret = clientSecret;
+            VenmoHelper.clientID = clientID;
+            VenmoHelper.clientSecret = clientSecret;
             loggedIn = false;
         }
 
-        public VenmoHelper(int clientID, string clientSecret, string userAccessToken)
+        public static void SetUp(int clientID, string clientSecret, string userAccessToken)
         {
-            this.clientID = clientID;
-            this.clientSecret = clientSecret;
-            this.userAccessToken = userAccessToken;
-            loggedIn = true;
+            VenmoHelper.clientID = clientID;
+            VenmoHelper.clientSecret = clientSecret;
+            VenmoHelper.userAccessToken = userAccessToken;
+            VenmoHelper.loggedIn = true;
         }
-
-        #endregion
 
         #region Tasks
 
@@ -75,22 +71,21 @@ namespace VenmoWrapper
         /// Asynchrously logs the user into Venmo given an access code.
         /// </summary>
         /// <param name="accessCode">The access code retrieved from Venmo's OAuth login page.</param>
-        /// <returns>Returns a dictionary with 3 keys:
-        /// "accessToken" is the perpetual use access token for the user.
-        /// "user" is the json data containing the info about the user.
-        /// "responseCode" is the TCP response code retrieved from the transaction.
+        /// <returns>Returns a VenmoUser object corresponding to the current user.
         /// Returns null if already logged in.
         /// </returns>
-        public async Task<VenmoUser> LogUserIn(string accessCode)
+        public static async Task<VenmoUser> LogUserIn(string accessCode)
         {
             if (loggedIn)
             {
                 return null;
             }
+            VenmoHelper.clientID = clientID;
+            VenmoHelper.clientSecret = clientSecret;
 
             string venmoResponse = await LogIn(accessCode);
             VenmoUser currentUser = JsonConvert.DeserializeObject<VenmoUser>(venmoResponse);
-            this.currentUser = currentUser;
+            VenmoHelper.currentUser = currentUser;
             return currentUser;
         }
 
@@ -104,7 +99,7 @@ namespace VenmoWrapper
         /// <param name="audience">The audience ("public", "friends", or "private") to which this transaction should be visible.</param>
         /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the user is not logged in.</exception>
         /// <returns></returns>
-        public async Task<PaymentResult> PostVenmoTransaction(USER_TYPE usertype, string recipient, string note, double sendAmount, string audience = "public")
+        public static async Task<PaymentResult> PostVenmoTransaction(USER_TYPE usertype, string recipient, string note, double sendAmount, string audience = "public")
         {
             if (!loggedIn)
             {
@@ -113,7 +108,7 @@ namespace VenmoWrapper
 
             string type = usertype == USER_TYPE.EMAIL ? "email=" : usertype == USER_TYPE.PHONE ? "phone=" : "user_id=";
 
-            string postData = "access_token=" + userAccessToken + "&" + usertype + recipient + "&note=" + note + "&amount=" + sendAmount + "&audience=" + audience;
+            string postData = "access_token=" + userAccessToken + "&" + type + recipient + "&note=" + note + "&amount=" + sendAmount + "&audience=" + audience;
             string venmoResponse = await VenmoPost(venmoPaymentUrl, postData);
 
             PaymentResult pr = JsonConvert.DeserializeObject<PaymentResult>(venmoResponse);
@@ -125,7 +120,7 @@ namespace VenmoWrapper
         /// </summary>
         /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the user is not logged in.</exception>
         /// <returns>VenmoUser object corresponding to the current user.</returns>
-        public async Task<VenmoUser> GetMe()
+        public static async Task<VenmoUser> GetMe()
         {
             if (!loggedIn)
             {
@@ -134,6 +129,7 @@ namespace VenmoWrapper
 
             string result = await VenmoGet(venmoMeUrl, userAccessTokenQueryString);
             VenmoUser currentUser = JsonConvert.DeserializeObject<Dictionary<string, VenmoUser>>(result)["data"];
+            VenmoHelper.currentUser = currentUser;
             return currentUser;
         }
 
@@ -143,7 +139,7 @@ namespace VenmoWrapper
         /// <param name="userID">The desired user's ID</param>
         /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the user is not logged in.</exception>
         /// <returns>VenmoUser object with the desired user's info.</returns>
-        public async Task<VenmoUser> GetUser(int userID)
+        public static async Task<VenmoUser> GetUser(int userID)
         {
             if (!loggedIn)
             {
@@ -161,16 +157,25 @@ namespace VenmoWrapper
         /// <param name="userID">The user ID of the user whose friends list is being queried.</param>
         /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the user is not logged in.</exception>
         /// <returns>Returns a List of VenmoUsers.</returns>
-        public async Task<List<VenmoUser>> GetFriendsList(int userID)
+        public static async Task<List<VenmoUser>> GetFriendsList(int userID)
         {
             if (!loggedIn)
             {
                 throw new NotLoggedInException(notLoggedInError);
             }
             string friendsUrl = String.Format(venmoFriendsUrl, userID);
-            string result = await VenmoGet(friendsUrl, userAccessTokenQueryString);
-            Dictionary<string, object> friendsData = JsonConvert.DeserializeObject<Dictionary<string, object>>(result);
-            return JsonConvert.DeserializeObject<List<VenmoUser>>(friendsData["data"].ToString());
+            string queryString = userAccessTokenQueryString + "&limit=50";
+            List<VenmoUser> friendsList = new List<VenmoUser>();
+            while (queryString != "")
+            {
+                string result = await VenmoGet(friendsUrl, queryString);
+                Dictionary<string, object> friendsData = JsonConvert.DeserializeObject<Dictionary<string, object>>(result);
+                friendsList.AddRange(JsonConvert.DeserializeObject<List<VenmoUser>>(friendsData["data"].ToString()));
+                queryString = ((Newtonsoft.Json.Linq.JObject)friendsData["pagination"]).HasValues ?
+                    userAccessTokenQueryString + "&" + ((Newtonsoft.Json.Linq.JObject)friendsData["pagination"])["next"].ToString().Split('?')[1] : "";
+            }
+
+            return friendsList;
         }
 
         /// <summary>
@@ -179,7 +184,7 @@ namespace VenmoWrapper
         /// <param name="transactionID">The id of the transaction to be returned.</param>
         /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the user is not logged in.</exception>
         /// <returns>Returns the VenmoTransaction requested</returns>
-        public async Task<VenmoTransaction> GetTransaction(int transactionID)
+        public static async Task<VenmoTransaction> GetTransaction(int transactionID)
         {
             if (!loggedIn)
             {
@@ -205,13 +210,13 @@ namespace VenmoWrapper
         /// </summary>
         /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the user is not logged in.</exception>
         /// <returns>List of VenmoTransactions</returns>
-        public async Task<List<VenmoTransaction>> GetRecentTransactions()
+        public static async Task<List<VenmoTransaction>> GetRecentTransactions()
         {
             if (!loggedIn)
             {
                 throw new NotLoggedInException(notLoggedInError);
             }
-            string venmoResponse = await VenmoGet(venmoPaymentUrl, userAccessTokenQueryString);
+            string venmoResponse = await VenmoGet(venmoPaymentUrl, userAccessTokenQueryString + "&limit=6");
 
             Dictionary<string, object> transactionData = JsonConvert.DeserializeObject<Dictionary<string, object>>(venmoResponse);
             List<VenmoTransaction> recentTransactions = JsonConvert.DeserializeObject<List<VenmoTransaction>>(transactionData["data"].ToString());
@@ -230,22 +235,23 @@ namespace VenmoWrapper
 
         #region Helper Functions
 
-        private async Task<string> LogIn(string accessCode)
+        private static async Task<string> LogIn(string accessCode)
         {
             string postData = "client_id=" + clientID + "&client_secret=" + clientSecret + "&code=" + accessCode;
             string venmoResponse = await VenmoPost(venmoAuthUrl, postData);
 
             Dictionary<string, object> results = JsonConvert.DeserializeObject<Dictionary<string, object>>(venmoResponse);
-            userAccessToken = (string)results["access_token"];
-            loggedIn = true;
+            VenmoHelper.userAccessToken = (string)results["access_token"];
+            VenmoHelper.loggedIn = true;
 
             return results["user"].ToString();
         }
 
-        private async Task<string> VenmoGet(string url, string queryString)
+        private static async Task<string> VenmoGet(string url, string queryString)
         {
             HttpWebRequest webRequest = (HttpWebRequest)HttpWebRequest.Create(url + queryString);
             webRequest.Method = "GET";
+            webRequest.Headers[HttpRequestHeader.IfModifiedSince] = DateTime.Now.ToString();
             var webResponse = (HttpWebResponse)(await Task<WebResponse>.Factory.FromAsync(webRequest.BeginGetResponse, (Func<IAsyncResult, WebResponse>)webRequest.BetterEndGetResponse, null));
 
             string responseCode = webResponse.StatusCode.ToString();
@@ -256,7 +262,7 @@ namespace VenmoWrapper
             return response;
         }
 
-        private async Task<string> VenmoPost(string url, string postData)
+        private static async Task<string> VenmoPost(string url, string postData)
         {
             HttpWebRequest webRequest = (HttpWebRequest)HttpWebRequest.Create(url);
             webRequest.Method = "POST";
@@ -282,9 +288,9 @@ namespace VenmoWrapper
 
         #region Utilities
 
-        public void errorCheck(string responseCode, string response)
+        public static void errorCheck(string responseCode, string response)
         {
-            if (responseCode != "OK")
+            if (responseCode != "OK" && response != "")
             {
                 var definition = new { message = "", code = 0 };
                 Dictionary<string, object> message = JsonConvert.DeserializeObject<Dictionary<string, object>>(response);
@@ -299,10 +305,18 @@ namespace VenmoWrapper
                     throw new VenmoException(error.message);
                 }
             }
+            else if (response == "")
+            {
+                throw new VenmoException("Your internet connection appears to be having some problems. Check it out and try again!");
+            }
         }
 
-        public string GetContentFromWebResponse(HttpWebResponse response)
+        public static string GetContentFromWebResponse(HttpWebResponse response)
         {
+            if (response == null)
+            {
+                return "";
+            }
             using (StreamReader httpWebStreamReader = new StreamReader(response.GetResponseStream()))
             {
                 string result = httpWebStreamReader.ReadToEnd();
@@ -310,11 +324,11 @@ namespace VenmoWrapper
             }
         }
 
-        public void logOut()
+        public static void logOut()
         {
-            userAccessToken = "";
-            currentUser = null;
-            loggedIn = false;
+            VenmoHelper.userAccessToken = "";
+            VenmoHelper.currentUser = null;
+            VenmoHelper.loggedIn = false;
         }
 
         #endregion
