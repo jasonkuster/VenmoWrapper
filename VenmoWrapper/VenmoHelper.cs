@@ -33,6 +33,8 @@ namespace VenmoWrapper
                 return "?access_token=" + userAccessToken;
             }
         }
+        public static string refreshToken { get; private set; }
+        public static DateTime expireTime { get; private set; }
         public static bool loggedIn { get; private set; }
         public static VenmoUser currentUser { get; private set; }
 
@@ -243,6 +245,9 @@ namespace VenmoWrapper
             Dictionary<string, object> results = JsonConvert.DeserializeObject<Dictionary<string, object>>(venmoResponse);
             VenmoHelper.userAccessToken = (string)results["access_token"];
             VenmoHelper.loggedIn = true;
+            VenmoHelper.refreshToken = (string)results["refresh_token"];
+            int expTime = int.Parse((string)results["expires_in"]);
+            VenmoHelper.expireTime = DateTime.Now.AddSeconds(expTime);
 
             return results["user"].ToString();
         }
