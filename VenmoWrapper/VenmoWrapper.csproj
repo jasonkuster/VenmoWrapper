@@ -35,6 +35,7 @@
   <ItemGroup>
     <Compile Include="PaymentResult.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="VenmoAuth.cs" />
     <Compile Include="VenmoHelper.cs" />
     <Compile Include="VenmoTransaction.cs" />
     <Compile Include="VenmoUser.cs" />
