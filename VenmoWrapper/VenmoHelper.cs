@@ -269,7 +269,7 @@ namespace VenmoWrapper
             VenmoHelper.userAccessToken = (string)results["access_token"];
             VenmoHelper.loggedIn = true;
             VenmoHelper.refreshToken = (string)results["refresh_token"];
-            int expTime = int.Parse((string)results["expires_in"]);1
+            int expTime = int.Parse((string)results["expires_in"]);
             VenmoHelper.expireTime = DateTime.Now.AddSeconds(expTime);
         }
 
