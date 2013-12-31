@@ -36,17 +36,21 @@ namespace VenmoWrapper
                 return null;
             }
         }
+        private static VenmoAuth _currentAuth;
         public static VenmoAuth currentAuth
         {
             get
             {
                 if (loggedIn)
                 {
-                    return currentAuth;
+                    return _currentAuth;
                 }
                 return null;
             }
-            private set;
+            private set
+            {
+                _currentAuth = value;
+            }
         }
         public static bool loggedIn { get; private set; }
 
