@@ -25,18 +25,32 @@ namespace VenmoWrapper
         public enum USER_TYPE { USER_ID, PHONE, EMAIL, INVALID };
         public static int clientID { get; private set; }
         public static string clientSecret { get; private set; }
-        public static string userAccessToken { get; private set; }
         public static string userAccessTokenQueryString
         {
             get
             {
-                return "?access_token=" + userAccessToken;
+                return "?access_token=" + currentAuth.userAccessToken;
             }
         }
+        /*
+        public static string userAccessToken { get; private set; }
         public static string refreshToken { get; private set; }
         public static DateTime expireTime { get; private set; }
-        public static bool loggedIn { get; private set; }
         public static VenmoUser currentUser { get; private set; }
+         */
+        public static VenmoAuth currentAuth
+        {
+            get
+            {
+                if (loggedIn)
+                {
+                    return currentAuth;
+                }
+                return null;
+            }
+            private set;
+        }
+        public static bool loggedIn { get; private set; }
 
         #endregion
 
@@ -56,16 +70,19 @@ namespace VenmoWrapper
         {
             VenmoHelper.clientID = clientID;
             VenmoHelper.clientSecret = clientSecret;
-            loggedIn = false;
+            VenmoHelper.loggedIn = false;
         }
 
-        public static void SetUp(int clientID, string clientSecret, string userAccessToken, string refreshToken, DateTime expireTime)
+        public static void SetUp(int clientID, string clientSecret, VenmoAuth auth)
         {
             VenmoHelper.clientID = clientID;
             VenmoHelper.clientSecret = clientSecret;
+            VenmoHelper.currentAuth = auth;
+            /*
             VenmoHelper.userAccessToken = userAccessToken;
             VenmoHelper.refreshToken = refreshToken;
             VenmoHelper.expireTime = expireTime;
+             */
             VenmoHelper.loggedIn = true;
         }
 
@@ -84,19 +101,21 @@ namespace VenmoWrapper
             {
                 return null;
             }
-            if (expireTime <= DateTime.Now)
-            {
-                RefreshLogin();
-            }
             VenmoHelper.clientID = clientID;
             VenmoHelper.clientSecret = clientSecret;
 
             string venmoResponse = await LogIn(accessCode);
-            VenmoUser currentUser = JsonConvert.DeserializeObject<VenmoUser>(venmoResponse);
-            VenmoHelper.currentUser = currentUser;
 
-            return new VenmoAuth() { accessToken = VenmoHelper.userAccessToken, expireTime = VenmoHelper.expireTime,
-                refreshToken = VenmoHelper.refreshToken, User = VenmoHelper.currentUser };
+            Dictionary<string, object> results = JsonConvert.DeserializeObject<Dictionary<string, object>>(venmoResponse);
+            string uat = (string)results["access_token"];
+            string rt = (string)results["refresh_token"];
+            int expTime = int.Parse((string)results["expires_in"]);
+            DateTime et = DateTime.Now.AddSeconds(expTime);
+            VenmoUser user = JsonConvert.DeserializeObject<VenmoUser>(results["user"].ToString());
+            VenmoHelper.currentAuth = new VenmoAuth(rt, uat, et, user);
+            loggedIn = true;
+
+            return VenmoHelper.currentAuth;
         }
 
         /// <summary>
@@ -115,10 +134,11 @@ namespace VenmoWrapper
             {
                 throw new NotLoggedInException(notLoggedInError);
             }
+            CheckAuthExpiration();
 
             string type = usertype == USER_TYPE.EMAIL ? "email=" : usertype == USER_TYPE.PHONE ? "phone=" : "user_id=";
 
-            string postData = "access_token=" + userAccessToken + "&" + type + recipient + "&note=" + note + "&amount=" + sendAmount + "&audience=" + audience;
+            string postData = "access_token=" + currentAuth.userAccessToken + "&" + type + recipient + "&note=" + note + "&amount=" + sendAmount + "&audience=" + audience;
             string venmoResponse = await VenmoPost(venmoPaymentUrl, postData);
 
             PaymentResult pr = JsonConvert.DeserializeObject<PaymentResult>(venmoResponse);
@@ -136,10 +156,11 @@ namespace VenmoWrapper
             {
                 throw new NotLoggedInException(notLoggedInError);
             }
+            CheckAuthExpiration();
 
             string result = await VenmoGet(venmoMeUrl, userAccessTokenQueryString);
             VenmoUser currentUser = JsonConvert.DeserializeObject<Dictionary<string, VenmoUser>>(result)["data"];
-            VenmoHelper.currentUser = currentUser;
+            VenmoHelper.currentAuth.currentUser = currentUser;
             return currentUser;
         }
 
@@ -155,6 +176,8 @@ namespace VenmoWrapper
             {
                 throw new NotLoggedInException(notLoggedInError);
             }
+            CheckAuthExpiration();
+
             string userUrl = String.Format(venmoUserUrl, userID);
             string userJson = await VenmoGet(userUrl, userAccessTokenQueryString);
             Dictionary<string, object> userData = JsonConvert.DeserializeObject<Dictionary<string, object>>(userJson);
@@ -173,6 +196,8 @@ namespace VenmoWrapper
             {
                 throw new NotLoggedInException(notLoggedInError);
             }
+            CheckAuthExpiration();
+
             string friendsUrl = String.Format(venmoFriendsUrl, userID);
             string queryString = userAccessTokenQueryString + "&limit=50";
             List<VenmoUser> friendsList = new List<VenmoUser>();
@@ -200,6 +225,8 @@ namespace VenmoWrapper
             {
                 throw new NotLoggedInException(notLoggedInError);
             }
+            CheckAuthExpiration();
+
             string paymentUrl = String.Format(venmoIndividualPaymentUrl, transactionID);
 
             string venmoResponse = await VenmoGet(paymentUrl, userAccessTokenQueryString);
@@ -226,6 +253,8 @@ namespace VenmoWrapper
             {
                 throw new NotLoggedInException(notLoggedInError);
             }
+            CheckAuthExpiration();
+
             string venmoResponse = await VenmoGet(venmoPaymentUrl, userAccessTokenQueryString + "&limit=6");
 
             Dictionary<string, object> transactionData = JsonConvert.DeserializeObject<Dictionary<string, object>>(venmoResponse);
@@ -248,29 +277,20 @@ namespace VenmoWrapper
         private static async Task<string> LogIn(string accessCode)
         {
             string postData = "client_id=" + clientID + "&client_secret=" + clientSecret + "&code=" + accessCode;
-            string venmoResponse = await VenmoPost(venmoAuthUrl, postData);
-
-            Dictionary<string, object> results = JsonConvert.DeserializeObject<Dictionary<string, object>>(venmoResponse);
-            VenmoHelper.userAccessToken = (string)results["access_token"];
-            VenmoHelper.loggedIn = true;
-            VenmoHelper.refreshToken = (string)results["refresh_token"];
-            int expTime = int.Parse((string)results["expires_in"]);
-            VenmoHelper.expireTime = DateTime.Now.AddSeconds(expTime);
-
-            return results["user"].ToString();
+            return await VenmoPost(venmoAuthUrl, postData);
         }
 
         private static async void RefreshLogin()
         {
-            string postData = "client_id=" + clientID + "&client_secret=" + clientSecret + "&code=" + userAccessToken + "&refresh_token=" + refreshToken;
+            string postData = "client_id=" + clientID + "&client_secret=" + clientSecret + "&code=" + VenmoHelper.currentAuth.userAccessToken + "&refresh_token=" + VenmoHelper.currentAuth.refreshToken;
             string venmoResponse = await VenmoPost(venmoAuthUrl, postData);
 
             Dictionary<string, object> results = JsonConvert.DeserializeObject<Dictionary<string, object>>(venmoResponse);
-            VenmoHelper.userAccessToken = (string)results["access_token"];
-            VenmoHelper.loggedIn = true;
-            VenmoHelper.refreshToken = (string)results["refresh_token"];
+            string uat = (string)results["access_token"];
+            string rt = (string)results["refresh_token"];
             int expTime = int.Parse((string)results["expires_in"]);
-            VenmoHelper.expireTime = DateTime.Now.AddSeconds(expTime);
+            DateTime et = DateTime.Now.AddSeconds(expTime);
+            currentAuth.RefreshLogin(rt, uat, et);
         }
 
         private static async Task<string> VenmoGet(string url, string queryString)
@@ -350,11 +370,22 @@ namespace VenmoWrapper
             }
         }
 
+        private static void CheckAuthExpiration()
+        {
+            if (currentAuth != null && currentAuth.expireTime <= DateTime.Now)
+            {
+                RefreshLogin();
+            }
+        }
+
         public static void logOut()
         {
+            /*
             VenmoHelper.userAccessToken = "";
             VenmoHelper.currentUser = null;
+             */
             VenmoHelper.loggedIn = false;
+            VenmoHelper.currentAuth = null;
         }
 
         #endregion
