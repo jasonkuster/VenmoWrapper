@@ -30,7 +30,7 @@ namespace VenmoWrapper
         {
             get
             {
-                if (!target_user_id.Equals(VenmoHelper.currentAuth.currentUser.id.ToString()))
+                if (!target_user_id.Equals(VenmoHelper.currentUser.id.ToString()))
                 {
                     return action == "pay" ? "/Assets/AppBar/minus.png" : "/Toolkit.Content/ApplicationBar.Add.png";
                 }
@@ -47,7 +47,7 @@ namespace VenmoWrapper
             {
                 if (target_user != null)
                 {
-                    if (!target_user_id.Equals(VenmoHelper.currentAuth.currentUser.id.ToString()))
+                    if (!target_user_id.Equals(VenmoHelper.currentUser.id.ToString()))
                     {
                         return action == "pay" ? "You paid " + target_user.display_name + " $" + amount + "." : "You charged " + target_user.display_name + " $" + amount + ".";
                     }

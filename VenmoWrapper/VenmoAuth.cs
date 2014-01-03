@@ -1,18 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text;
 
 namespace VenmoWrapper
 {
+    [DataContract]
     public class VenmoAuth
     {
-        public VenmoAuth(string refreshToken, string userAccessToken, DateTime expireTime, VenmoUser currentUser)
+        public VenmoAuth(string refreshToken, string userAccessToken, DateTime expireTime)
         {
             this.refreshToken = refreshToken;
             this.userAccessToken = userAccessToken;
             this.expireTime = expireTime;
-            this.currentUser = currentUser;
         }
 
         public void RefreshLogin(string refreshToken, string userAccessToken, DateTime expireTime)
@@ -21,10 +22,22 @@ namespace VenmoWrapper
             this.userAccessToken = userAccessToken;
             this.expireTime = expireTime;
         }
-
-        public string refreshToken { get; private set; }
-        public string userAccessToken { get; private set; }
-        public DateTime expireTime { get; private set; }
-        public VenmoUser currentUser { get; set; }
+        [DataMember]
+        public string refreshToken { get; set; }
+        [DataMember]
+        public string userAccessToken { get; set; }
+        [DataMember]
+        public long utcDate { get; set; }
+        [IgnoreDataMember]
+        public DateTime expireTime {
+            get
+            {
+                return DateTime.FromFileTimeUtc(utcDate).ToLocalTime();
+            }
+            set
+            {
+                utcDate = value.ToFileTimeUtc();
+            }
+        }
     }
 }

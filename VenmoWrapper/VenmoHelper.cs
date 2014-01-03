@@ -52,6 +52,7 @@ namespace VenmoWrapper
                 _currentAuth = value;
             }
         }
+        public static VenmoUser currentUser { get; set; }
         public static bool loggedIn { get; private set; }
 
         #endregion
@@ -105,11 +106,12 @@ namespace VenmoWrapper
 
             string rt = (string)results["refresh_token"];
             string uat = (string)results["access_token"];
-            int expTime = int.Parse((string)results["expires_in"]);
-            DateTime et = DateTime.Now.AddSeconds(expTime);
+            long ext = (long)results["expires_in"];
+            DateTime et = DateTime.Now.AddSeconds(ext);
             VenmoUser user = JsonConvert.DeserializeObject<VenmoUser>(results["user"].ToString());
 
-            VenmoHelper.currentAuth = new VenmoAuth(rt, uat, et, user);
+            VenmoHelper.currentAuth = new VenmoAuth(rt, uat, et);
+            VenmoHelper.currentUser = user;
             loggedIn = true;
 
             return VenmoHelper.currentAuth;
@@ -149,7 +151,7 @@ namespace VenmoWrapper
 
             string result = await VenmoGet(venmoMeUrl, userAccessTokenQueryString);
             VenmoUser currentUser = JsonConvert.DeserializeObject<Dictionary<string, VenmoUser>>(result)["data"];
-            VenmoHelper.currentAuth.currentUser = currentUser;
+            VenmoHelper.currentUser = currentUser;
             return currentUser;
         }
 
@@ -261,8 +263,8 @@ namespace VenmoWrapper
             Dictionary<string, object> results = JsonConvert.DeserializeObject<Dictionary<string, object>>(venmoResponse);
             string rt = (string)results["refresh_token"];
             string uat = (string)results["access_token"];
-            int expTime = int.Parse((string)results["expires_in"]);
-            DateTime et = DateTime.Now.AddSeconds(expTime);
+            long ext = (long)results["expires_in"];
+            DateTime et = DateTime.Now.AddSeconds(ext);
             currentAuth.RefreshLogin(rt, uat, et);
         }
 

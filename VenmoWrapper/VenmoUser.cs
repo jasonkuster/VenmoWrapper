@@ -71,11 +71,7 @@ namespace VenmoWrapper
         {
             get
             {
-                if (balance != null)
-                {
-                    return balance.ToString("N2");
-                }
-                return "";
+                return balance.ToString("N2");
             }
         }
         public string phone { get; set; }
