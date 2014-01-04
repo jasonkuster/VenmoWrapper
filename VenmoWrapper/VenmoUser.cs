@@ -77,12 +77,18 @@ namespace VenmoWrapper
         public string phone { get; set; }
         public string email { get; set; }
 
+        /// <summary>
+        /// Standard CompareTo method. Compares on first name, then last name.
+        /// </summary>
+        /// <param name="obj">The VenmoUser to which to compare this user.</param>
+        /// <returns>1 if the provided user comes after this user, 0 if they are the same,
+        /// and -1 if this user comes after the provided user.</returns>
         public int CompareTo(object obj)
         {
             VenmoUser user = obj as VenmoUser;
             if (user == null)
             {
-                throw new ArgumentException("Object is not Preson");
+                throw new ArgumentException("Object is not of type VenmoUser");
             }
             int same = this.first_name.CompareTo(user.first_name);
             return same == 0 ? this.last_name.CompareTo(user.last_name) : same;

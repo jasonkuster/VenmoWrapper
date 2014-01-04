@@ -11,10 +11,9 @@ using System.Threading.Tasks;
 
 namespace VenmoWrapper
 {
-    //TODO: Document ALL THE THINGS
     /// <summary>
     /// This is the main Venmo helper class. It is initialized by providing the client's ID
-    /// and secret, with the option to provide a userAccessToken in case the user has already
+    /// and secret, with the option to provide a VenmoAuth in case the user has already
     /// authenticated this particular client.
     /// </summary>
     public static class VenmoHelper
@@ -22,9 +21,14 @@ namespace VenmoWrapper
 
         #region Class Vars
 
+        //The current payment types Venmo supports, plus an option for invalid type.
         public enum USER_TYPE { USER_ID, PHONE, EMAIL, INVALID };
+
+        //The client-specific ID and secret. These can be found on your app's page on Venmo.
         public static int clientID { get; private set; }
         public static string clientSecret { get; private set; }
+
+        //A simple accessor which appends the correct query string to the user access token.
         public static string userAccessTokenQueryString
         {
             get
@@ -36,6 +40,8 @@ namespace VenmoWrapper
                 return null;
             }
         }
+
+        //The VenmoAuth specific to the current user.
         private static VenmoAuth _currentAuth;
         public static VenmoAuth currentAuth
         {
@@ -52,6 +58,8 @@ namespace VenmoWrapper
                 _currentAuth = value;
             }
         }
+
+        //The current user object.
         public static VenmoUser currentUser { get; set; }
         public static bool loggedIn { get; private set; }
 
@@ -59,16 +67,23 @@ namespace VenmoWrapper
 
         #region Constants
 
+        //The various URLs for the different Venmo endpoints.
         const string venmoAuthUrl = "https://api.venmo.com/oauth/access_token";
         const string venmoPaymentUrl = "https://api.venmo.com/payments";
         const string venmoIndividualPaymentUrl = "https://api.venmo.com/payments/{0}";
         const string venmoUserUrl = "https://api.venmo.com/users/{0}";
         const string venmoFriendsUrl = "https://api.venmo.com/users/{0}/friends";
         const string venmoMeUrl = "https://api.venmo.com/me";
+
         const string notLoggedInError = "You are not currently logged in. Please log in now.";
 
         #endregion
 
+        /// <summary>
+        /// This is the setup method for a client which does not have a logged-in user.
+        /// </summary>
+        /// <param name="clientID">The client-specific ID, can be found on the Venmo app page.</param>
+        /// <param name="clientSecret">The client-specific secret, can be found on the Venmo app page.</param>
         public static void SetUp(int clientID, string clientSecret)
         {
             VenmoHelper.clientID = clientID;
@@ -76,6 +91,12 @@ namespace VenmoWrapper
             VenmoHelper.loggedIn = false;
         }
 
+        /// <summary>
+        /// This is the setup method for a client which has the VenmoAuth for a logged-in user.
+        /// </summary>
+        /// <param name="clientID">The client-specific ID, can be found on the Venmo app page.</param>
+        /// <param name="clientSecret">The client-specific secret, can be found on the Venmo app page.</param>
+        /// <param name="auth">The VenmoAuth object, containing the user access token, refresh token, and refresh time.</param>
         public static void SetUp(int clientID, string clientSecret, VenmoAuth auth)
         {
             VenmoHelper.clientID = clientID;
@@ -90,7 +111,7 @@ namespace VenmoWrapper
         /// Asynchrously logs the user into Venmo given an access code.
         /// </summary>
         /// <param name="accessCode">The access code retrieved from Venmo's OAuth login page.</param>
-        /// <returns>Returns a VenmoUser object corresponding to the current user.
+        /// <returns>Returns a VenmoAuth object corresponding to the current user.
         /// Returns null if already logged in.
         /// </returns>
         public static async Task<VenmoAuth> LogUserIn(string accessCode)
@@ -120,11 +141,11 @@ namespace VenmoWrapper
         /// <summary>
         /// Asynchronously negotiates a transaction with Venmo.
         /// </summary>
-        /// <param name="usertype">The type of user ID you will be </param>
+        /// <param name="usertype">The type of user ID which will be provided.</param>
         /// <param name="recipient">The user's ID, phone number, or email as indicated by usertype.</param>
         /// <param name="note">The note to accompany the transaction.</param>
         /// <param name="sendAmount">The <code>double</code> amount of the transaction.</param>
-        /// <param name="audience">The audience ("public", "friends", or "private") to which this transaction should be visible.</param>
+        /// <param name="audience">The audience ("public", "friends", or "private") to which this transaction should be visible. Defaults to public.</param>
         /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the user is not logged in.</exception>
         /// <returns></returns>
         public static async Task<PaymentResult> PostVenmoTransaction(USER_TYPE usertype, string recipient, string note, double sendAmount, string audience = "public")
@@ -141,7 +162,7 @@ namespace VenmoWrapper
         }
 
         /// <summary>
-        /// Asynchrously returns the current user.
+        /// Returns the current user.
         /// </summary>
         /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the user is not logged in.</exception>
         /// <returns>VenmoUser object corresponding to the current user.</returns>
@@ -156,10 +177,10 @@ namespace VenmoWrapper
         }
 
         /// <summary>
-        /// Asynchronously gets a user from Venmo.
+        /// Gets a user by user ID from Venmo.
         /// </summary>
         /// <param name="userID">The desired user's ID</param>
-        /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the user is not logged in.</exception>
+        /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the current user is not logged in.</exception>
         /// <returns>VenmoUser object with the desired user's info.</returns>
         public static async Task<VenmoUser> GetUser(int userID)
         {
@@ -172,10 +193,11 @@ namespace VenmoWrapper
         }
 
         /// <summary>
-        /// Asynchronously gets the user's friend list.
+        /// Gets the user's friend list.
         /// </summary>
         /// <param name="userID">The user ID of the user whose friends list is being queried.</param>
         /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the user is not logged in.</exception>
+        /// <remarks>Venmo paginates this data, but this method retrieves the entire friends list.</remarks>
         /// <returns>Returns a List of VenmoUsers.</returns>
         public static async Task<List<VenmoUser>> GetFriendsList(int userID)
         {
@@ -197,7 +219,7 @@ namespace VenmoWrapper
         }
 
         /// <summary>
-        /// Given a transactionID, returns the VenmoTransaction 
+        /// Given a transaction ID, returns the VenmoTransaction corresponding to that transaction.
         /// </summary>
         /// <param name="transactionID">The id of the transaction to be returned.</param>
         /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the user is not logged in.</exception>
@@ -222,7 +244,7 @@ namespace VenmoWrapper
         }
 
         /// <summary>
-        /// Method to get the recent transactions in which the current user has been involved.
+        /// Retrieves recent transactions in which the current user has been involved.
         /// </summary>
         /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the user is not logged in.</exception>
         /// <returns>List of VenmoTransactions</returns>
@@ -249,12 +271,15 @@ namespace VenmoWrapper
 
         #region Helper Functions
 
+        //Method to simplify logging user in.
         private static async Task<string> LogIn(string accessCode)
         {
             string postData = "client_id=" + clientID + "&client_secret=" + clientSecret + "&code=" + accessCode;
             return await VenmoPost(venmoAuthUrl, postData);
         }
 
+        //Because of Venmo's change to how authentication works, auth tokens now only last for a specific amount of time.
+        //Once the user's token has expired, this method will be called and the login will be refreshed.
         private static async void RefreshLogin()
         {
             string postData = "client_id=" + clientID + "&client_secret=" + clientSecret + "&code=" + VenmoHelper.currentAuth.userAccessToken + "&refresh_token=" + VenmoHelper.currentAuth.refreshToken;
@@ -268,6 +293,7 @@ namespace VenmoWrapper
             currentAuth.RefreshLogin(rt, uat, et);
         }
 
+        //Executes a GET against a specific Venmo endpoint with a specified query string.
         private static async Task<string> VenmoGet(string url, string queryString)
         {
             HttpWebRequest webRequest = (HttpWebRequest)HttpWebRequest.Create(url + queryString);
@@ -283,6 +309,7 @@ namespace VenmoWrapper
             return response;
         }
 
+        //Executes a POST against a specific Venmo endpoint with specified data for the body of the POST.
         private static async Task<string> VenmoPost(string url, string postData)
         {
             HttpWebRequest webRequest = (HttpWebRequest)HttpWebRequest.Create(url);
@@ -309,6 +336,7 @@ namespace VenmoWrapper
 
         #region Utilities
 
+        //Checks a response from Venmo for errors and throws the appropriate exception if an error has occurred.
         public static void errorCheck(string responseCode, string response)
         {
             if (responseCode != "OK" && response != "")
@@ -332,6 +360,7 @@ namespace VenmoWrapper
             }
         }
 
+        //Gets the content from a given webresponse, or returns an empty string if there has been an error.
         public static string GetContentFromWebResponse(HttpWebResponse response)
         {
             if (response == null)
@@ -345,6 +374,7 @@ namespace VenmoWrapper
             }
         }
 
+        //Ensures the user is logged in and that their login has not expired.
         private static void CheckLoginStatus()
         {
             if (!loggedIn)
@@ -357,9 +387,11 @@ namespace VenmoWrapper
             }
         }
 
+        //Removes all user-specific information and resets the VenmoHelper to the not-logged-in state.
         public static void logOut()
         {
             VenmoHelper.loggedIn = false;
+            VenmoHelper.currentUser = null;
             VenmoHelper.currentAuth = null;
         }
 
@@ -367,6 +399,7 @@ namespace VenmoWrapper
 
     }
 
+    //Exception to be thrown if the user is not logged in.
     public class NotLoggedInException : System.Exception
     {
         public NotLoggedInException() : base() { }
@@ -374,6 +407,7 @@ namespace VenmoWrapper
         public NotLoggedInException(string message, System.Exception inner) : base(message, inner) { }
     }
 
+    //Catch-all exception class for any errors returned from Venmo.
     public class VenmoException : System.Exception
     {
         public VenmoException() : base() { }

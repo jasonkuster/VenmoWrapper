@@ -24,8 +24,7 @@ namespace VenmoWrapper
         public string action { get; set; }
         public string target_user_type { get; set; }
 
-        //Get rid of these for final version, these should be handled by the user
-        //to allow for more flexibility.
+        //TODO: Return "userpay", "usercharge", "otherpay", "othercharge" instead.
         public string typeImage
         {
             get
