@@ -13,7 +13,7 @@ namespace VenmoWrapper
     public class VenmoAuth
     {
         /// <summary>
-        /// 
+        /// Sets the 4 parameters necessary for a VenmoAuth.
         /// </summary>
         /// <param name="refreshToken">The refresh token provided by Venmo.</param>
         /// <param name="userAccessToken">The user access token provided by Venmo.</param>

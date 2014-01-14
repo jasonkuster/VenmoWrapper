@@ -11,11 +11,7 @@ namespace VenmoWrapper
     /// </summary>
     public class PaymentResult
     {
-        public string status { get; set; }
-        public int target_user_id { get; set; }
-        public string action { get; set; }
-        public string message { get; set; }
-        public string balance { get; set; }
-        public string id { get; set; }
+        public double balance { get; set; }
+        public VenmoTransaction payment { get; set; }
     }
 }

@@ -11,54 +11,53 @@ namespace VenmoWrapper
     /// </summary>
     public class VenmoTransaction
     {
-        public string status { get; set; }
-        public string completed { get; set; }
         public string id { get; set; }
-        public object fee { get; set; }
-        public string created { get; set; }
-        public double amount { get; set; }
-        public string target_user_id { get; set; }
-        public VenmoUser target_user { get; set; }
+        public string status { get; set; }
         public string note { get; set; }
-        public string audience { get; set; }
+        public double amount { get; set; }
         public string action { get; set; }
-        public string target_user_type { get; set; }
+        public string date_created { get; set; }
+        public string date_completed { get; set; }
+        public string audience { get; set; }
+        public VenmoTarget target { get; set; }
+        public VenmoUser actor { get; set; }
+        public object fee { get; set; }
+        public double refund { get; set; }
+        public string medium { get; set; }
 
-        //TODO: Return "userpay", "usercharge", "otherpay", "othercharge" instead.
-        public string typeImage
+        public string paymentType
         {
             get
             {
-                if (!target_user_id.Equals(VenmoHelper.currentAuth.currentUser.id.ToString()))
-                {
-                    return action == "pay" ? "/Assets/AppBar/minus.png" : "/Toolkit.Content/ApplicationBar.Add.png";
-                }
-                else
-                {
-                    return action == "pay" ? "/Toolkit.Content/ApplicationBar.Add.png" : "/Assets/AppBar/minus.png";
-                }
-            }
-        }
+                bool userInitiated = actor.id == VenmoHelper.currentAuth.currentUser.id ? true : false;
+                bool payment = "pay".Equals(action);
+                return userInitiated ? payment ? "userpay" : "usercharge" : payment ? "otherpay" : "othercharge";
 
-        public string viewText
-        {
-            get
-            {
-                if (target_user != null)
+                //The hilarious line above is functionally identical to the below.
+                /*
+                if (userInitiated)
                 {
-                    if (!target_user_id.Equals(VenmoHelper.currentAuth.currentUser.id.ToString()))
+                    if (payment)
                     {
-                        return action == "pay" ? "You paid " + target_user.display_name + " $" + amount + "." : "You charged " + target_user.display_name + " $" + amount + ".";
+                        return "userpay";
                     }
                     else
                     {
-                        return action == "pay" ? "Someone paid you $" + amount + "." : "Someone charged you $" + amount + ".";
+                        return "usercharge";
                     }
                 }
                 else
                 {
-                    return action == "pay" ? "You paid " + target_user_id + " $" + amount + "." : "You charged " + target_user_id + " $" + amount + ".";
+                    if (payment)
+                    {
+                        return "otherpay";
+                    }
+                    else
+                    {
+                        return "othercharge";
+                    }
                 }
+                 * */
             }
         }
     }

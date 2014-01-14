@@ -15,6 +15,9 @@ namespace VenmoWrapper
     [DataContract]
     public class VenmoUser : IComparable
     {
+        //TODO: Remove the first_name firstname, etc... duplication.
+        [DataMember]
+        public string username { get; set; }
         [DataMember]
         public int id { get; set; }
         [DataMember]
@@ -60,7 +63,9 @@ namespace VenmoWrapper
             }
         }
         [DataMember]
-        public string username { get; set; }
+        public bool is_friend { get; set; }
+        [DataMember]
+        public int friends_count { get; set; }
         [DataMember]
         public string date_joined { get; set; }
         [DataMember]
@@ -86,7 +91,11 @@ namespace VenmoWrapper
         {
             get
             {
-                return balance.ToString("N2");
+                if (balance >= 0)
+                {
+                    return balance.ToString("N2");
+                }
+                return "";
             }
         }
         [DataMember]
