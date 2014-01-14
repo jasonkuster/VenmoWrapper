@@ -59,8 +59,6 @@ namespace VenmoWrapper
             }
         }
 
-        //The current user object.
-        public static VenmoUser currentUser { get; set; }
         public static bool loggedIn { get; private set; }
 
         #endregion
@@ -131,8 +129,7 @@ namespace VenmoWrapper
             DateTime et = DateTime.Now.AddSeconds(ext);
             VenmoUser user = JsonConvert.DeserializeObject<VenmoUser>(results["user"].ToString());
 
-            VenmoHelper.currentAuth = new VenmoAuth(rt, uat, et);
-            VenmoHelper.currentUser = user;
+            VenmoHelper.currentAuth = new VenmoAuth(rt, uat, et, user);
             loggedIn = true;
 
             return VenmoHelper.currentAuth;
@@ -172,7 +169,7 @@ namespace VenmoWrapper
 
             string result = await VenmoGet(venmoMeUrl, userAccessTokenQueryString);
             VenmoUser currentUser = JsonConvert.DeserializeObject<Dictionary<string, VenmoUser>>(result)["data"];
-            VenmoHelper.currentUser = currentUser;
+            VenmoHelper.currentAuth.currentUser = currentUser;
             return currentUser;
         }
 
@@ -391,7 +388,6 @@ namespace VenmoWrapper
         public static void logOut()
         {
             VenmoHelper.loggedIn = false;
-            VenmoHelper.currentUser = null;
             VenmoHelper.currentAuth = null;
         }
 

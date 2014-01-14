@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -11,11 +12,14 @@ namespace VenmoWrapper
     /// including the current user. Check if balance, phone number, or email
     /// are null to determine if this is the current user or not.
     /// </summary>
+    [DataContract]
     public class VenmoUser : IComparable
     {
-        //TODO: Fix such that client can check whether or not this is the current user
+        [DataMember]
         public int id { get; set; }
+        [DataMember]
         public string first_name { get; set; }
+        [IgnoreDataMember]
         public string firstname
         {
             get
@@ -27,7 +31,9 @@ namespace VenmoWrapper
                 first_name = value;
             }
         }
+        [DataMember]
         public string last_name { get; set; }
+        [IgnoreDataMember]
         public string lastname
         {
             get
@@ -39,7 +45,9 @@ namespace VenmoWrapper
                 last_name = value;
             }
         }
+        [DataMember]
         public string display_name { get; set; }
+        [IgnoreDataMember]
         public string name
         {
             get
@@ -51,9 +59,13 @@ namespace VenmoWrapper
                 display_name = value;
             }
         }
+        [DataMember]
         public string username { get; set; }
+        [DataMember]
         public string date_joined { get; set; }
+        [DataMember]
         public string profile_picture_url { get; set; }
+        [IgnoreDataMember]
         public string picture
         {
             get
@@ -65,8 +77,11 @@ namespace VenmoWrapper
                 profile_picture_url = value;
             }
         }
+        [DataMember]
         public string about { get; set; }
+        [DataMember]
         public double balance { get; set; }
+        [IgnoreDataMember]
         public string formattedBalance
         {
             get
@@ -74,7 +89,9 @@ namespace VenmoWrapper
                 return balance.ToString("N2");
             }
         }
+        [DataMember]
         public string phone { get; set; }
+        [DataMember]
         public string email { get; set; }
 
         /// <summary>
