@@ -66,12 +66,12 @@ namespace VenmoWrapper
         #region Constants
 
         //The various URLs for the different Venmo endpoints.
-        const string venmoAuthUrl = "https://api.venmo.com/oauth/access_token";
-        const string venmoPaymentUrl = "https://api.venmo.com/payments";
-        const string venmoIndividualPaymentUrl = "https://api.venmo.com/payments/{0}";
-        const string venmoUserUrl = "https://api.venmo.com/users/{0}";
-        const string venmoFriendsUrl = "https://api.venmo.com/users/{0}/friends";
-        const string venmoMeUrl = "https://api.venmo.com/me";
+        const string venmoAuthUrl = "https://api.venmo.com/v1/oauth/access_token";
+        const string venmoPaymentUrl = "https://api.venmo.com/v1/payments";
+        const string venmoIndividualPaymentUrl = "https://api.venmo.com/v1/payments/{0}";
+        const string venmoUserUrl = "https://api.venmo.com/v1/users/{0}";
+        const string venmoFriendsUrl = "https://api.venmo.com/v1/users/{0}/friends";
+        const string venmoMeUrl = "https://api.venmo.com/v1/me";
 
         const string notLoggedInError = "You are not currently logged in. Please log in now.";
 
@@ -128,7 +128,14 @@ namespace VenmoWrapper
             long ext = (long)results["expires_in"];
             DateTime et = DateTime.Now.AddSeconds(ext);
             VenmoUser user = JsonConvert.DeserializeObject<VenmoUser>(results["user"].ToString());
-            user.balance = (double)results["balance"];
+            if (results["balance"] != null)
+            {
+                user.balance = (double)results["balance"];
+            }
+            else
+            {
+                user.balance = -1;
+            }
 
             VenmoHelper.currentAuth = new VenmoAuth(rt, uat, et, user);
             loggedIn = true;
@@ -146,7 +153,7 @@ namespace VenmoWrapper
         /// <param name="audience">The audience ("public", "friends", or "private") to which this transaction should be visible. Defaults to public.</param>
         /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the user is not logged in.</exception>
         /// <returns></returns>
-        public static async Task<PaymentResult> PostVenmoTransaction(USER_TYPE usertype, string recipient, string note, double sendAmount, string audience = "public")
+        public static async Task<VenmoTransaction> PostVenmoTransaction(USER_TYPE usertype, string recipient, string note, double sendAmount, string audience = "public")
         {
             CheckLoginStatus();
 
@@ -155,8 +162,18 @@ namespace VenmoWrapper
             string postData = "access_token=" + currentAuth.userAccessToken + "&" + type + recipient + "&note=" + note + "&amount=" + sendAmount + "&audience=" + audience;
             string venmoResponse = await VenmoPost(venmoPaymentUrl, postData);
             string paymentData = JsonConvert.DeserializeObject<Dictionary<string, object>>(venmoResponse)["data"].ToString();
+            Dictionary<string, object> transData = JsonConvert.DeserializeObject <Dictionary<string, object>>(paymentData);
 
-            PaymentResult transaction = JsonConvert.DeserializeObject<PaymentResult>(paymentData);
+            if (transData["balance"] != null)
+            {
+                VenmoHelper.currentAuth.currentUser.balance = (double)transData["balance"];
+            }
+            else
+            {
+                VenmoHelper.currentAuth.currentUser.balance = -1;
+            }
+
+            VenmoTransaction transaction = JsonConvert.DeserializeObject<VenmoTransaction>(transData["payment"].ToString());
 
             return transaction;
         }
@@ -171,7 +188,19 @@ namespace VenmoWrapper
             CheckLoginStatus();
 
             string result = await VenmoGet(venmoMeUrl, userAccessTokenQueryString);
-            VenmoUser currentUser = JsonConvert.DeserializeObject<Dictionary<string, VenmoUser>>(result)["data"];
+            string resultData = JsonConvert.DeserializeObject<Dictionary<string, object>>(result)["data"].ToString();
+
+            Dictionary<string, object> userData = JsonConvert.DeserializeObject<Dictionary<string, object>>(resultData);
+
+            VenmoUser currentUser = JsonConvert.DeserializeObject<VenmoUser>(userData["user"].ToString());
+            if (userData["balance"] != null)
+            {
+                currentUser.balance = (double)userData["balance"];
+            }
+            else
+            {
+                currentUser.balance = -1;
+            }
             VenmoHelper.currentAuth.currentUser = currentUser;
             return currentUser;
         }
@@ -182,7 +211,7 @@ namespace VenmoWrapper
         /// <param name="userID">The desired user's ID</param>
         /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the current user is not logged in.</exception>
         /// <returns>VenmoUser object with the desired user's info.</returns>
-        public static async Task<VenmoUser> GetUser(int userID)
+        public static async Task<VenmoUser> GetUser(long userID)
         {
             CheckLoginStatus();
 
@@ -199,7 +228,7 @@ namespace VenmoWrapper
         /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the user is not logged in.</exception>
         /// <remarks>Venmo paginates this data, but this method retrieves the entire friends list.</remarks>
         /// <returns>Returns a List of VenmoUsers.</returns>
-        public static async Task<List<VenmoUser>> GetFriendsList(int userID)
+        public static async Task<List<VenmoUser>> GetFriendsList(long userID)
         {
             CheckLoginStatus();
 
@@ -224,7 +253,7 @@ namespace VenmoWrapper
         /// <param name="transactionID">The id of the transaction to be returned.</param>
         /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the user is not logged in.</exception>
         /// <returns>Returns the VenmoTransaction requested</returns>
-        public static async Task<VenmoTransaction> GetTransaction(int transactionID)
+        public static async Task<VenmoTransaction> GetTransaction(long transactionID)
         {
             CheckLoginStatus();
 

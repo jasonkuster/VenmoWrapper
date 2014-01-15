@@ -21,15 +21,15 @@ namespace VenmoWrapper
         public string audience { get; set; }
         public VenmoTarget target { get; set; }
         public VenmoUser actor { get; set; }
-        public object fee { get; set; }
-        public double refund { get; set; }
+        public double? fee { get; set; }
+        public double? refund { get; set; }
         public string medium { get; set; }
 
         public string paymentType
         {
             get
             {
-                bool userInitiated = actor.id == VenmoHelper.currentAuth.currentUser.id ? true : false;
+                bool userInitiated = actor.id.Equals(VenmoHelper.currentAuth.currentUser.id) ? true : false;
                 bool payment = "pay".Equals(action);
                 return userInitiated ? payment ? "userpay" : "usercharge" : payment ? "otherpay" : "othercharge";
 

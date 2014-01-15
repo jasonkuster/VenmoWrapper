@@ -19,7 +19,7 @@ namespace VenmoWrapper
         [DataMember]
         public string username { get; set; }
         [DataMember]
-        public int id { get; set; }
+        public string id { get; set; }
         [DataMember]
         public string first_name { get; set; }
         [IgnoreDataMember]
