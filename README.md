@@ -5,7 +5,7 @@ This is a C# library for Venmo (server-side flow). Originally written for Window
 
 This library is currently fully functional. There may be bugs, as testing has not been extensive, but all functions work in at least one production application (mine). Please contact me with any other bugs.
 
-The next update that will be coming up is uploading this project to NuGet for easy importing and use.
+This project is hosted on NuGet [here](https://www.nuget.org/packages/VenmoWrapper/) and can be installed in Visual Studio by opening the Package Manager Console and typing `Install-Package VenmoWrapper`.
 
 Required Packages:
 
