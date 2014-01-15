@@ -14,7 +14,7 @@ namespace VenmoWrapper
 {
     /// <summary>
     /// This is the main Venmo helper class. It is initialized by providing the client's ID
-    /// and secret, with the option to provide a VenmoAuth in case the user has already
+    /// and secret, with the option to provide a VenmoAuth in the case where the user has already
     /// authenticated this particular client.
     /// </summary>
     public static class VenmoHelper
@@ -132,7 +132,7 @@ namespace VenmoWrapper
             VenmoUser user = JsonConvert.DeserializeObject<VenmoUser>(results["user"].ToString());
             if (results["balance"] != null)
             {
-                user.balance = (double)results["balance"];
+                user.balance = double.Parse(results["balance"].ToString());
             }
             else
             {
@@ -169,7 +169,7 @@ namespace VenmoWrapper
 
             if (transData["balance"] != null)
             {
-                VenmoHelper.currentAuth.currentUser.balance = (double)transData["balance"];
+                VenmoHelper.currentAuth.currentUser.balance = double.Parse(transData["balance"].ToString());
             }
             else
             {
@@ -198,7 +198,7 @@ namespace VenmoWrapper
             VenmoUser currentUser = JsonConvert.DeserializeObject<VenmoUser>(userData["user"].ToString());
             if (userData["balance"] != null)
             {
-                currentUser.balance = (double)userData["balance"];
+                currentUser.balance = double.Parse(userData["balance"].ToString());
             }
             else
             {

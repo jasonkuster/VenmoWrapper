@@ -8,6 +8,7 @@ namespace VenmoWrapper
 {
     /// <summary>
     /// An object containing all the data provided by Venmo for a transaction.
+    /// N.B: fee and refund are of type Nullable&lt;double&gt;, not just double.
     /// </summary>
     public class VenmoTransaction
     {
@@ -25,6 +26,9 @@ namespace VenmoWrapper
         public double? refund { get; set; }
         public string medium { get; set; }
 
+        /// <summary>
+        /// Accessor which returns the payment type of this particular transaction.
+        /// </summary>
         public string paymentType
         {
             get
@@ -58,6 +62,47 @@ namespace VenmoWrapper
                     }
                 }
                  * */
+            }
+        }
+
+        /// <summary>
+        /// Accessor which provides a human-readable string describing what took place in this transaction.
+        /// </summary>
+        public string transactionString
+        {
+            get
+            {
+                string actorname = actor.display_name;
+                string targetname;
+                switch (target.type)
+                {
+                    case "phone":
+                        targetname = target.phone;
+                        break;
+                    case "email":
+                        targetname = target.email;
+                        break;
+                    case "user":
+                        targetname = target.user.display_name;
+                        break;
+                    default:
+                        targetname = "someone";
+                        break;
+                }
+
+                switch (paymentType)
+                {
+                    case "userpay":
+                        return "You paid " + targetname + " $" + amount + ".";
+                    case "usercharge":
+                        return "You charged " + targetname + " $" + amount + ".";
+                    case "otherpay":
+                        return actorname + " paid you $" + amount + ".";
+                    case "othercharge":
+                        return actorname + " charged you $" + amount + ".";
+                    default:
+                        return "Something Happened.";
+                }
             }
         }
     }
