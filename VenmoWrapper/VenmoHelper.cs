@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -106,7 +107,7 @@ namespace VenmoWrapper
         #region Tasks
 
         /// <summary>
-        /// Asynchrously logs the user into Venmo given an access code.
+        /// Logs the user into Venmo given an access code.
         /// </summary>
         /// <param name="accessCode">The access code retrieved from Venmo's OAuth login page.</param>
         /// <returns>Returns a VenmoAuth object corresponding to the current user.
@@ -119,14 +120,15 @@ namespace VenmoWrapper
                 return null;
             }
 
-            string venmoResponse = await LogIn(accessCode);
+            string postData = "client_id=" + clientID + "&client_secret=" + clientSecret + "&code=" + accessCode;
+            string venmoResponse = await VenmoPost(venmoAuthUrl, postData);
 
             Dictionary<string, object> results = JsonConvert.DeserializeObject<Dictionary<string, object>>(venmoResponse);
 
-            string rt = (string)results["refresh_token"];
-            string uat = (string)results["access_token"];
-            long ext = (long)results["expires_in"];
-            DateTime et = DateTime.Now.AddSeconds(ext);
+            string refresh_token = (string)results["refresh_token"];
+            string user_access_token = (string)results["access_token"];
+            long expire_time = (long)results["expires_in"];
+            DateTime expires_in = DateTime.Now.AddSeconds(expire_time);
             VenmoUser user = JsonConvert.DeserializeObject<VenmoUser>(results["user"].ToString());
             if (results["balance"] != null)
             {
@@ -137,14 +139,14 @@ namespace VenmoWrapper
                 user.balance = -1;
             }
 
-            VenmoHelper.currentAuth = new VenmoAuth(rt, uat, et, user);
+            VenmoHelper.currentAuth = new VenmoAuth(refresh_token, user_access_token, expires_in, user);
             loggedIn = true;
 
             return VenmoHelper.currentAuth;
         }
 
         /// <summary>
-        /// Asynchronously negotiates a transaction with Venmo.
+        /// Negotiates a transaction with Venmo.
         /// </summary>
         /// <param name="usertype">The type of user ID which will be provided.</param>
         /// <param name="recipient">The user's ID, phone number, or email as indicated by usertype.</param>
@@ -152,7 +154,7 @@ namespace VenmoWrapper
         /// <param name="sendAmount">The <code>double</code> amount of the transaction.</param>
         /// <param name="audience">The audience ("public", "friends", or "private") to which this transaction should be visible. Defaults to public.</param>
         /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the user is not logged in.</exception>
-        /// <returns></returns>
+        /// <returns>VenmoTransaction object corresponding to the just-negotiated transaction.</returns>
         public static async Task<VenmoTransaction> PostVenmoTransaction(USER_TYPE usertype, string recipient, string note, double sendAmount, string audience = "public")
         {
             CheckLoginStatus();
@@ -161,6 +163,7 @@ namespace VenmoWrapper
 
             string postData = "access_token=" + currentAuth.userAccessToken + "&" + type + recipient + "&note=" + note + "&amount=" + sendAmount + "&audience=" + audience;
             string venmoResponse = await VenmoPost(venmoPaymentUrl, postData);
+
             string paymentData = JsonConvert.DeserializeObject<Dictionary<string, object>>(venmoResponse)["data"].ToString();
             Dictionary<string, object> transData = JsonConvert.DeserializeObject <Dictionary<string, object>>(paymentData);
 
@@ -235,13 +238,15 @@ namespace VenmoWrapper
             string friendsUrl = String.Format(venmoFriendsUrl, userID);
             string queryString = userAccessTokenQueryString + "&limit=50";
             List<VenmoUser> friendsList = new List<VenmoUser>();
+
             while (queryString != "")
             {
                 string result = await VenmoGet(friendsUrl, queryString);
                 Dictionary<string, object> friendsData = JsonConvert.DeserializeObject<Dictionary<string, object>>(result);
                 friendsList.AddRange(JsonConvert.DeserializeObject<List<VenmoUser>>(friendsData["data"].ToString()));
-                queryString = ((Newtonsoft.Json.Linq.JObject)friendsData["pagination"]).HasValues ?
-                    userAccessTokenQueryString + "&" + ((Newtonsoft.Json.Linq.JObject)friendsData["pagination"])["next"].ToString().Split('?')[1] : "";
+
+                JObject pagData = (JObject)friendsData["pagination"];
+                queryString = pagData.HasValues ? userAccessTokenQueryString + "&" + pagData["next"].ToString().Split('?')[1] : "";
             }
 
             return friendsList;
@@ -258,12 +263,10 @@ namespace VenmoWrapper
             CheckLoginStatus();
 
             string paymentUrl = String.Format(venmoIndividualPaymentUrl, transactionID);
-
             string venmoResponse = await VenmoGet(paymentUrl, userAccessTokenQueryString);
 
             Dictionary<string, object> transactionData = JsonConvert.DeserializeObject<Dictionary<string, object>>(venmoResponse);
             VenmoTransaction trans = JsonConvert.DeserializeObject<VenmoTransaction>(transactionData["data"].ToString());
-
             return trans;
         }
 
@@ -280,20 +283,12 @@ namespace VenmoWrapper
 
             Dictionary<string, object> transactionData = JsonConvert.DeserializeObject<Dictionary<string, object>>(venmoResponse);
             List<VenmoTransaction> recentTransactions = JsonConvert.DeserializeObject<List<VenmoTransaction>>(transactionData["data"].ToString());
-
             return recentTransactions;
         }
 
         #endregion
 
         #region Helper Functions
-
-        //Method to simplify logging user in.
-        private static async Task<string> LogIn(string accessCode)
-        {
-            string postData = "client_id=" + clientID + "&client_secret=" + clientSecret + "&code=" + accessCode;
-            return await VenmoPost(venmoAuthUrl, postData);
-        }
 
         //Because of Venmo's change to how authentication works, auth tokens now only last for 60 days.
         //Once the user's token has expired, this method will be called and the login will be refreshed.
@@ -303,11 +298,11 @@ namespace VenmoWrapper
             string venmoResponse = await VenmoPost(venmoAuthUrl, postData);
 
             Dictionary<string, object> results = JsonConvert.DeserializeObject<Dictionary<string, object>>(venmoResponse);
-            string rt = (string)results["refresh_token"];
-            string uat = (string)results["access_token"];
-            long ext = (long)results["expires_in"];
-            DateTime et = DateTime.Now.AddSeconds(ext);
-            currentAuth.RefreshLogin(rt, uat, et);
+            string refresh_token = (string)results["refresh_token"];
+            string user_access_token = (string)results["access_token"];
+            long expire_time = (long)results["expires_in"];
+            DateTime expires_in = DateTime.Now.AddSeconds(expire_time);
+            currentAuth.RefreshLogin(refresh_token, user_access_token, expires_in);
         }
 
         //Executes a GET against a specific Venmo endpoint with a specified query string.
@@ -361,7 +356,7 @@ namespace VenmoWrapper
                 var definition = new { message = "", code = 0 };
                 Dictionary<string, object> message = JsonConvert.DeserializeObject<Dictionary<string, object>>(response);
                 var error = JsonConvert.DeserializeAnonymousType(message["error"].ToString(), definition);
-                //TODO Handle all the errors Venmo could provide instead of just revoked token.
+                //TODO Handle all the errors Venmo could give instead of just revoked token.
                 if (error.code == 262)
                 {
                     logOut();
