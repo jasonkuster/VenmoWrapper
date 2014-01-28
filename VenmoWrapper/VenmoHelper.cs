@@ -62,6 +62,10 @@ namespace VenmoWrapper
 
         public static bool loggedIn { get; private set; }
 
+        private static string friendQueryString;
+        private static long friendID;
+        private static string transactionQueryString;
+
         #endregion
 
         #region Constants
@@ -228,27 +232,54 @@ namespace VenmoWrapper
         /// Gets the user's friend list.
         /// </summary>
         /// <param name="userID">The user ID of the user whose friends list is being queried.</param>
+        /// <param name="limit">The number of users to return. Providing a number &lt;=0 or no number will retrieve all friends.</param>
         /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the user is not logged in.</exception>
-        /// <remarks>Venmo paginates this data, but this method retrieves the entire friends list.</remarks>
+        /// <remarks>Venmo paginates this data, but this method retrieves the entire friends list by default.</remarks>
         /// <returns>Returns a List of VenmoUsers.</returns>
-        public static async Task<List<VenmoUser>> GetFriendsList(long userID)
+        public static async Task<List<VenmoUser>> GetFriendsList(long userID, int limit = 0)
         {
             CheckLoginStatus();
 
-            string friendsUrl = String.Format(venmoFriendsUrl, userID);
-            string queryString = userAccessTokenQueryString + "&limit=50";
-            List<VenmoUser> friendsList = new List<VenmoUser>();
-
-            while (queryString != "")
+            bool downloadAll = false;
+            if (limit <= 0)
             {
-                string result = await VenmoGet(friendsUrl, queryString);
-                Dictionary<string, object> friendsData = JsonConvert.DeserializeObject<Dictionary<string, object>>(result);
-                friendsList.AddRange(JsonConvert.DeserializeObject<List<VenmoUser>>(friendsData["data"].ToString()));
-
-                JObject pagData = (JObject)friendsData["pagination"];
-                queryString = pagData.HasValues ? userAccessTokenQueryString + "&" + pagData["next"].ToString().Split('?')[1] : "";
+                downloadAll = true;
+                limit = 50;
             }
 
+            friendID = userID;
+            friendQueryString = userAccessTokenQueryString + "&limit=" + limit;
+            List<VenmoUser> friendsList = new List<VenmoUser>();
+
+            do
+            {
+                friendsList.AddRange(await GetMoreFriends());
+            } while (friendQueryString != "" && downloadAll);
+
+            return friendsList;
+        }
+
+        /// <summary>
+        /// Method which continues pagination initiated by GetFriendsList.
+        /// </summary>
+        /// <returns>A list of VenmoUsers (may be empty if no more pages).</returns>
+        public static async Task<List<VenmoUser>> GetMoreFriends()
+        {
+            CheckLoginStatus();
+
+            if (String.IsNullOrEmpty(friendQueryString))
+            {
+                return new List<VenmoUser>();
+            }
+
+            string friendsUrl = String.Format(venmoFriendsUrl, friendID);
+
+            string result = await VenmoGet(friendsUrl, friendQueryString);
+            Dictionary<string, object> friendsData = JsonConvert.DeserializeObject<Dictionary<string, object>>(result);
+            List<VenmoUser> friendsList = JsonConvert.DeserializeObject<List<VenmoUser>>(friendsData["data"].ToString());
+
+            JObject pagData = (JObject)friendsData["pagination"];
+            friendQueryString = pagData.HasValues ? userAccessTokenQueryString + "&" + pagData["next"].ToString().Split('?')[1] : "";
             return friendsList;
         }
 
@@ -273,16 +304,42 @@ namespace VenmoWrapper
         /// <summary>
         /// Retrieves recent transactions in which the current user has been involved.
         /// </summary>
+        /// <param name="limit">The number of transactions to retrieve. When left out, defaults to 25.</param>
         /// <exception cref="VenmoWrapper.NotLoggedInException">Throws a NotLoggedInException if the user is not logged in.</exception>
         /// <returns>List of VenmoTransactions</returns>
-        public static async Task<List<VenmoTransaction>> GetRecentTransactions()
+        public static async Task<List<VenmoTransaction>> GetRecentTransactions(int limit = 25)
         {
             CheckLoginStatus();
 
-            string venmoResponse = await VenmoGet(venmoPaymentUrl, userAccessTokenQueryString + "&limit=6");
+            if (limit <= 0)
+            {
+                return new List<VenmoTransaction>();
+            }
+
+            transactionQueryString = userAccessTokenQueryString + "&limit=" + limit;
+            return await GetMoreTransactions();
+        }
+
+        /// <summary>
+        /// Method which continues pagination initiated by GetRecentTransactions.
+        /// </summary>
+        /// <returns>A list of VenmoTransactions (may be empty if no more pages).</returns>
+        public static async Task<List<VenmoTransaction>> GetMoreTransactions()
+        {
+            CheckLoginStatus();
+
+            if (String.IsNullOrEmpty(transactionQueryString))
+            {
+                return new List<VenmoTransaction>();
+            }
+
+            string venmoResponse = await VenmoGet(venmoPaymentUrl, transactionQueryString);
 
             Dictionary<string, object> transactionData = JsonConvert.DeserializeObject<Dictionary<string, object>>(venmoResponse);
             List<VenmoTransaction> recentTransactions = JsonConvert.DeserializeObject<List<VenmoTransaction>>(transactionData["data"].ToString());
+            JObject pagData = (JObject)transactionData["pagination"];
+            transactionQueryString = pagData.HasValues ? userAccessTokenQueryString + "&" + pagData["next"].ToString().Split('?')[1] : "";
+
             return recentTransactions;
         }
 

@@ -16,6 +16,13 @@ namespace VenmoWrapper
         public string status { get; set; }
         public string note { get; set; }
         public double amount { get; set; }
+        public string formattedAmount
+        {
+            get
+            {
+                return amount.ToString("N2");
+            }
+        }
         public string action { get; set; }
         public string date_created { get; set; }
         public string date_completed { get; set; }
@@ -93,15 +100,33 @@ namespace VenmoWrapper
                 switch (paymentType)
                 {
                     case "userpay":
-                        return "You paid " + targetname + " $" + amount + ".";
+                        return "You paid " + targetname + ".";
                     case "usercharge":
-                        return "You charged " + targetname + " $" + amount + ".";
+                        return "You charged " + targetname + ".";
                     case "otherpay":
-                        return actorname + " paid you $" + amount + ".";
+                        return actorname + " paid you.";
                     case "othercharge":
-                        return actorname + " charged you $" + amount + ".";
+                        return actorname + " charged you.";
                     default:
                         return "Something Happened.";
+                }
+            }
+        }
+
+        public string amountString
+        {
+            get
+            {
+                switch (paymentType)
+                {
+                    case "userpay":
+                    case "othercharge":
+                        return "-$" + formattedAmount;
+                    case "usercharge":
+                    case "otherpay":
+                        return "+$" + formattedAmount;
+                    default:
+                        return formattedAmount;
                 }
             }
         }
