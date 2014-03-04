@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>$id$</id>
+    <version>$version$</version>
+    <title>$title$</title>
+    <authors>Jason Kuster</authors>
+    <owners>Jason Kuster</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>$description$</description>
+    <releaseNotes>V1 Initial release of the library.</releaseNotes>
+    <copyright>Copyright 2014</copyright>
+    <tags>venmo</tags>
+  </metadata>
+</package>
