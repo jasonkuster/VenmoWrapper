@@ -7,8 +7,6 @@ This library is currently fully functional. There may be bugs, as testing has no
 
 This project is hosted on NuGet [here](https://www.nuget.org/packages/VenmoWrapper/) and can be installed in Visual Studio by opening the Package Manager Console and typing `Install-Package VenmoWrapper`.
 
-Upcoming Features: Currently adding pagination to all the features which support it. Additionally, adding "formattedAmount" and "amountString" accessors in VenmoTransaction and changing the "transactionString" accessor to be more in line with the Venmo website.
-
 Required Packages:
 
 Newtonsoft.Json
